@@ -128,12 +128,46 @@ class AuthController extends Controller
         ], 200);
     }
 
-    // /**
-    //  * Modification du mot de passe de l'utilisateur
-    //  */
-    // public function changePassword(Request $request){
+   /**
+ * Modification du mot de passe de l'utilisateur
+ */
+public function changePassword(Request $request)
+{
+    // Validation des données entrées
+    $validator = Validator::make($request->all(), [
+        'current_password' => 'required|string|min:8',
+        'new_password' => 'required|string|min:8|confirmed',
+    ]);
 
-    // }
+    // Gestion des erreurs de validation
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur de validation. Veuillez vérifier les entrées.',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    $user = Auth::user();
+
+    // Vérifier que le mot de passe actuel est correct
+    if (!Hash::check($request->current_password, $user->password)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Le mot de passe actuel est incorrect.'
+        ], 400);
+    }
+
+    // Mettre à jour le mot de passe de l'utilisateur
+    $user->password = Hash::make($request->new_password);
+    $user->save();
+
+    // Retourner un message de succès
+    return response()->json([
+        'success' => true,
+        'message' => 'Votre mot de passe a été mis à jour avec succès.'
+    ], 200);
+}
 
     public function getAllUsersWithRoles()
 {

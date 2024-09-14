@@ -14,4 +14,5 @@ Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:api')
 Route::post('refresh', [AuthController::class, 'refresh'])->middleware('auth:api');
 Route::get('me', [AuthController::class, 'me'])->middleware('auth:api');
 Route::get('/users', [AuthController::class, 'getAllUsersWithRoles']);
+Route::put('change-password', [AuthController::class, 'changePassword'])->middleware('auth:api');
 
