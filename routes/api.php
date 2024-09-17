@@ -3,6 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\DocumentTypeController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -16,3 +18,8 @@ Route::get('me', [AuthController::class, 'me'])->middleware('auth:api');
 Route::get('/users', [AuthController::class, 'getAllUsersWithRoles']);
 Route::put('change-password', [AuthController::class, 'changePassword'])->middleware('auth:api');
 
+
+Route::middleware('auth:api')->group(function () {
+    Route::apiResource('document-types', DocumentTypeController::class);
+    Route::apiResource('documents', DocumentController::class);
+});
