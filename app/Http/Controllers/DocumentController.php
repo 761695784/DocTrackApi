@@ -74,7 +74,7 @@ class DocumentController extends Controller
     protected function extractOwnerFirstName($text)
     {
         // Exemple de logique d'extraction pour le prénom
-        preg_match('/Prénom:\s*(\w+)/i', $text, $matches);
+        preg_match('/Prénoms:\s*(\w+)/i', $text, $matches);
         return $matches[1] ?? ''; // Récupérer le prénom ou retourner une chaîne vide
     }
 
