@@ -25,6 +25,8 @@ class StoreDocumentRequest extends FormRequest
     {
         return [
             'image' => 'required|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'OwnerFirstName' => 'required|string|max:255',
+            'OwnerLastName' => 'required|string|max:255',
             'Location' => 'required|string|max:255',
             'statut' => 'required|in:récupéré,non récupéré',
             'document_type_id' => 'required|exists:document_types,id',

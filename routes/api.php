@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentTypeController;
+use App\Http\Controllers\DeclarationDePerteController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -22,4 +23,7 @@ Route::put('change-password', [AuthController::class, 'changePassword'])->middle
 Route::middleware('auth:api')->group(function () {
     Route::apiResource('document-types', DocumentTypeController::class);
     Route::apiResource('documents', DocumentController::class);
+    Route::apiResource('declarations', DeclarationDePerteController::class);
+    
 });
+Route::apiResource('document', DocumentController::class);
