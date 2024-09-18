@@ -14,17 +14,21 @@ class DocumentPublishedNotification extends Mailable
 {
     use Queueable, SerializesModels;
 
-   // App\Mail\DocumentPublishedNotification.php
-public $document;
+    public $document;
+    public $Phone; // Ajoutez la propriété Phone
 
-public function __construct(Document $document)
-{
-    $this->document = $document;
-}
+    public function __construct($document, $Phone)
+    {
+        $this->document = $document;
+        $this->Phone = $Phone;
+    }
 
-public function build()
-{
-    return $this->subject('Document publié correspondant à votre déclaration de perte')
-                ->markdown('emails.document.published', ['document' => $this->document]);
-}
+    public function build()
+    {
+        return $this->subject('Document publié correspondant à votre déclaration de perte')
+                    ->markdown('emails.document.published', [
+                        'document' => $this->document,
+                        'phone' => $this->Phone // Corrigez ici
+                    ]);
+    }
 }

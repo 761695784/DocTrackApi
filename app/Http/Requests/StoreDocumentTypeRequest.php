@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreDocumentTypeRequest extends FormRequest
@@ -11,7 +12,8 @@ class StoreDocumentTypeRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        // Vérifie si l'utilisateur est authentifié
+        return Auth::check();
     }
 
     /**
@@ -22,7 +24,8 @@ class StoreDocumentTypeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'TypeName' => 'required|string|max:255|', // Valider que le nom du type de document est unique et ne contient pas de caractères spéciaux
+            'IdentificationSize' =>'required|string|',
         ];
     }
 }

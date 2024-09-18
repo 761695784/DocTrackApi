@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCommentaireRequest;
-use App\Http\Requests\UpdateCommentaireRequest;
 use App\Models\Commentaire;
+use Illuminate\Support\Facades\Auth;
 
 class CommentaireController extends Controller
 {
@@ -13,15 +13,9 @@ class CommentaireController extends Controller
      */
     public function index()
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
+        // Récupérer et retourner tous les commentaires
+        $commentaires = Commentaire::with('user', 'document')->get();
+        return response()->json($commentaires);
     }
 
     /**
@@ -29,7 +23,30 @@ class CommentaireController extends Controller
      */
     public function store(StoreCommentaireRequest $request)
     {
-        //
+        // Vérifier si l'utilisateur est authentifié
+        if (!Auth::check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous devez être authentifié pour commenter.'
+            ], 401);
+        }
+
+        // Récupérer l'utilisateur authentifié
+        $user = Auth::user();
+
+        // Créer un nouveau commentaire
+        $commentaire = Commentaire::create([
+            'contenu' => $request->contenu,
+            'user_id' => $user->id,
+            'document_id' => $request->document_id,
+        ]);
+
+        // Retourner une réponse JSON avec le commentaire créé
+        return response()->json([
+            'success' => true,
+            'message' => 'Commentaire créé avec succès.',
+            'commentaire' => $commentaire
+        ], 201);
     }
 
     /**
@@ -37,23 +54,8 @@ class CommentaireController extends Controller
      */
     public function show(Commentaire $commentaire)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Commentaire $commentaire)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateCommentaireRequest $request, Commentaire $commentaire)
-    {
-        //
+        // Récupérer et retourner le commentaire spécifique
+        return response()->json($commentaire);
     }
 
     /**
@@ -61,6 +63,20 @@ class CommentaireController extends Controller
      */
     public function destroy(Commentaire $commentaire)
     {
-        //
+        // Vérifier si l'utilisateur est authentifié et propriétaire du commentaire
+        if (Auth::id() !== $commentaire->user_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous n\'êtes pas autorisé à supprimer ce commentaire.'
+            ], 403);
+        }
+
+        // Supprimer le commentaire
+        $commentaire->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Commentaire supprimé avec succès.'
+        ]);
     }
 }

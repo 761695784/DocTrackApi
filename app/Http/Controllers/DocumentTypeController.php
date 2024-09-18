@@ -34,7 +34,12 @@ class DocumentTypeController extends Controller
 
         $documentType = DocumentType::create($validatedData); // Crée un nouveau type de document
 
-        return response()->json($documentType, 201); // Retourne le type de document créé avec un code HTTP 201
+        // return response()->json($documentType, 201); // Retourne le type de document créé avec un code HTTP 201
+        return response()->json([
+            'success' => true,
+            'message' => 'DocumentType créé avec succès.',
+            'documentType' => $documentType
+        ]);
     }
 
     /**
@@ -62,7 +67,12 @@ class DocumentTypeController extends Controller
 
         $documentType->update($validatedData); // Met à jour le type de document
 
-        return response()->json($documentType); // Retourne le type de document mis à jour
+        // return response()->json($documentType); // Retourne le type de document mis à jour
+        return response()->json([
+            'success' => true,
+            'message' => 'DocumentType mis à jour avec succès.',
+            'documentType' => $documentType
+        ]);
     }
 
     /**
@@ -72,6 +82,11 @@ class DocumentTypeController extends Controller
     {
         $documentType->delete(); // Supprime le type de document
 
-        return response()->json(null, 204); // Retourne une réponse vide avec un code HTTP 204 pour indiquer que la suppression a réussi
+        // return response()->json(null, 204); // Retourne une réponse vide avec un code HTTP 204 pour indiquer que la suppression a réussi
+        return response()->json([
+            'success' => true,
+            'message' => 'DocumentType supprimé avec succès.',
+            'documentType' => $documentType
+        ]);
     }
 }

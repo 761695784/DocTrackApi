@@ -52,8 +52,11 @@ class DeclarationDePerteController extends Controller
 
     private function sendNotificationEmail($user, $document)
     {
-        
-        // Envoi d'un email à l'utilisateur pour informer qu'un document correspondant à sa déclaration de perte a été publié.
-        Mail::to($user->email)->send(new DocumentPublishedNotification($document));
-    }
+        // Accédez au téléphone du propriétaire du document
+        $Phone = $document->user->Phone; // Vérifiez que la relation 'user' est correcte
+
+         // Envoyer le mail avec le document et le numéro de téléphone du propriétaire
+    Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone));
+}
+
 }

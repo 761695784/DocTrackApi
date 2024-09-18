@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreCommentaireRequest extends FormRequest
@@ -11,18 +12,17 @@ class StoreCommentaireRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return Auth::check(); // Autoriser uniquement les utilisateurs authentifiés
     }
 
     /**
      * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            //
+            'contenu' => 'required|string|max:500',
+            'document_id' => 'required|exists:documents,id', // Assurez-vous que le document existe
         ];
     }
 }

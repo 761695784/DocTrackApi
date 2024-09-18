@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\CommentaireController;
 use App\Http\Controllers\DocumentTypeController;
 use App\Http\Controllers\DeclarationDePerteController;
 
@@ -24,6 +25,7 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('document-types', DocumentTypeController::class);
     Route::apiResource('documents', DocumentController::class);
     Route::apiResource('declarations', DeclarationDePerteController::class);
+    Route::apiResource('comments', CommentaireController::class);
 
 });
 Route::apiResource('document', DocumentController::class);
