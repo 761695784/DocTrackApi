@@ -169,8 +169,16 @@ public function changePassword(Request $request)
     ], 200);
 }
 
-    public function getAllUsersWithRoles()
+public function getAllUsersWithRoles()
 {
+    // Vérifier si l'utilisateur est authentifié et a le rôle 'Admin'
+    if (!Auth::user() || !Auth::user()->hasRole('Admin')) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Accès refusé. Vous devez être un administrateur pour voir cette liste.'
+        ], 403);
+    }
+
     // Récupérer tous les utilisateurs avec leurs rôles
     $users = User::with('roles')->get();
 
@@ -191,5 +199,6 @@ public function changePassword(Request $request)
         'users' => $usersWithRoles
     ], 200);
 }
+
 }
 

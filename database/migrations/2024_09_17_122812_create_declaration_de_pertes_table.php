@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\DocumentType;
+use App\Models\User;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
@@ -19,6 +20,7 @@ return new class extends Migration
             $table->string('LastNameInDoc');
             $table->string('DocIdentification')->nullable();
             $table->foreignIdFor(DocumentType::class)->constrained()->onDelete('cascade');
+            $table->foreignIdFor(User::class)->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }

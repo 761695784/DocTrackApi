@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateDocumentRequest extends FormRequest
@@ -11,7 +12,8 @@ class UpdateDocumentRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        // Vérifie si l'utilisateur est authentifié
+        return Auth::check();
     }
 
     /**
@@ -20,9 +22,13 @@ class UpdateDocumentRequest extends FormRequest
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
-    {
-        return [
-            //
-        ];
+    {  return [
+        'image' => 'required|file|mimes:jpeg,png,jpg,pdf|max:2048',
+        'OwnerFirstName' => 'required|string|max:255',
+        'OwnerLastName' => 'required|string|max:255',
+        'statut' => 'required|in:récupéré,non récupéré',
+        'Location' => 'required|string|max:255',
+        'document_type_id' => 'required|exists:document_types,id', // Valider que le type de document existe
+    ];
     }
 }

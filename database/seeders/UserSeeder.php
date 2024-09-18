@@ -14,19 +14,28 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         // // Création d'un utilisateur admin
-        // $user = User::create([
-        //     'FirstName' => 'Saliou',
-        //     'LastName' => 'TALLA',
-        //     'Adress' => 'Dakar',
-        //     'Phone' => '123456789',
-        //     'email' => 'salioutalla@gmail.com',
-        //     'password' => Hash::make('adminpassword'),
-        // ]);
+        $user = User::create([
+            'FirstName' => 'Saliou',
+            'LastName' => 'TALLA',
+            'Adress' => 'Dakar',
+            'Phone' => '123456789',
+            'email' => 'salioutalla@gmail.com',
+            'password' => Hash::make('adminpassword'),
+        ]);
 
-        // // Assigner le rôle admin
-        // $user->assignRole('Admin');
+        // Assigner le rôle admin
+        $user->assignRole('Admin');
+
          // Liste de données d'utilisateurs fictifs
          $users = [
+            [
+                'FirstName' => 'Malang',
+                'LastName' => 'Marna',
+                'Adress' => 'Dakar',
+                'Phone' => '771234567',
+                'email' => 'Malang@gmail.com',
+                'password' => Hash::make('password123')
+            ],
             [
                 'FirstName' => 'Aliou',
                 'LastName' => 'Diallo',

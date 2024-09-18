@@ -59,7 +59,6 @@ class DocumentController extends Controller
      */
     public function update(UpdateDocumentRequest $request, Document $document)
     {
-        // Mettre à jour les informations du document
         $document->update($request->validated());
 
         return response()->json([

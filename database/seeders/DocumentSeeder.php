@@ -22,8 +22,8 @@ class DocumentSeeder extends Seeder
                 'OwnerLastName' => $faker->lastName, // Génère un nom de famille aléatoire
                 'Location' => $faker->city, // Génère un nom de ville aléatoire
                 'statut' => 'non récupéré', // Statut par défaut
-                'document_type_id' => rand(1, 5), // ID aléatoire pour le type de document (à ajuster selon tes types de document)
-                'user_id' => rand(4, 8), // ID aléatoire pour l'utilisateur (à ajuster selon tes utilisateurs)
+                'document_type_id' => rand(1, 4), // ID aléatoire pour le type de document (à ajuster selon tes types de document)
+                'user_id' => rand(2, 7), // ID aléatoire pour l'utilisateur (à ajuster selon tes utilisateurs)
                 'image' => $this->generateDummyImage(), // Génère une image fictive (voir fonction)
             ]);
         }
