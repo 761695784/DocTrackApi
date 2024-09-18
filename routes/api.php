@@ -24,6 +24,8 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('document-types', DocumentTypeController::class);
     Route::apiResource('documents', DocumentController::class);
     Route::apiResource('declarations', DeclarationDePerteController::class);
-    
+
 });
 Route::apiResource('document', DocumentController::class);
+
+

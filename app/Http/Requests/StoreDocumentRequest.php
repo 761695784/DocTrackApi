@@ -27,9 +27,9 @@ class StoreDocumentRequest extends FormRequest
             'image' => 'required|file|mimes:jpeg,png,jpg,pdf|max:2048',
             'OwnerFirstName' => 'required|string|max:255',
             'OwnerLastName' => 'required|string|max:255',
-            'Location' => 'required|string|max:255',
             'statut' => 'required|in:récupéré,non récupéré',
-            'document_type_id' => 'required|exists:document_types,id',
+            'Location' => 'required|string|max:255',
+            'document_type_id' => 'required|exists:document_types,id', // Valider que le type de document existe
         ];
     }
 }
