@@ -17,11 +17,13 @@ Route::post('login', [AuthController::class, 'login']);
 Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:api');
 Route::post('refresh', [AuthController::class, 'refresh'])->middleware('auth:api');
 Route::get('me', [AuthController::class, 'me'])->middleware('auth:api');
+Route::get('/users', [AuthController::class, 'getAllUsersWithRoles'])->middleware('auth:api');
 Route::put('change-password', [AuthController::class, 'changePassword'])->middleware('auth:api');
+Route::delete('users/{id}', [AuthController::class, 'deleteUser'])->middleware('auth:api');
+Route::post('create-admin', [AuthController::class, 'createAdmin'])->middleware('auth:api');
 
 
 Route::middleware('auth:api')->group(function () {
-    Route::get('/users', [AuthController::class, 'getAllUsersWithRoles']);
     Route::apiResource('document-types', DocumentTypeController::class);
     Route::apiResource('documents', DocumentController::class);
     Route::apiResource('declarations', DeclarationDePerteController::class);

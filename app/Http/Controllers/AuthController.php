@@ -169,6 +169,10 @@ public function changePassword(Request $request)
     ], 200);
 }
 
+
+/**
+ * Methode pour la liste des utilisateurs avec leurs rôles
+ */
 public function getAllUsersWithRoles()
 {
     // Vérifier si l'utilisateur est authentifié et a le rôle 'Admin'
@@ -188,6 +192,8 @@ public function getAllUsersWithRoles()
             'id' => $user->id,
             'FirstName' => $user->FirstName,
             'LastName' => $user->LastName,
+            'Adress' => $user->Adress,
+            'Phone' => $user->Phone,
             'email' => $user->email,
             'roles' => $user->getRoleNames() // Récupérer les rôles
         ];
@@ -199,6 +205,98 @@ public function getAllUsersWithRoles()
         'users' => $usersWithRoles
     ], 200);
 }
+
+/**
+ * Methode pour la suppression d'un user par l'admin
+*/
+
+public function deleteUser($id)
+{
+    // Vérifier si l'utilisateur est authentifié et a le rôle 'Admin'
+    if (!Auth::user() || !Auth::user()->hasRole('Admin')) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Accès refusé. Vous devez être un administrateur pour effectuer cette action.'
+        ], 403);
+    }
+
+    // Trouver l'utilisateur à supprimer
+    $user = User::find($id);
+
+    if (!$user) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Utilisateur non trouvé.'
+        ], 404);
+    }
+
+    // Supprimer l'utilisateur
+    $user->delete();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Utilisateur supprimé avec succès.'
+    ], 200);
+}
+
+/**
+ * Methode pour la creation d'un admin
+*/
+
+public function createAdmin(Request $request)
+{
+    // Vérifier si l'utilisateur est authentifié et a le rôle 'Admin'
+    if (!Auth::user() || !Auth::user()->hasRole('Admin')) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Accès refusé. Vous devez être un administrateur pour effectuer cette action.'
+        ], 403);
+    }
+
+    // Validation des données
+    $validator = Validator::make($request->all(), [
+        'FirstName' => 'required|string|max:40',
+        'LastName' => 'required|string|max:20',
+        'Adress' => 'required|string|max:100',
+        'Phone' => 'required|string|max:20',
+        'email' => 'required|string|email|max:50|unique:users',
+        'password' => 'required|string|min:8|confirmed',
+    ]);
+
+    // Gestion des erreurs de validation
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Échec de la création de l\'utilisateur. Veuillez vérifier les erreurs ci-dessous.',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    // Création de l'utilisateur
+    $user = User::create([
+        'FirstName' => $request->FirstName,
+        'LastName' => $request->LastName,
+        'Adress' => $request->Adress,
+        'Phone' => $request->Phone,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+    ]);
+
+    // Assignation du rôle Admin
+    $user->assignRole('Admin');
+
+    // Génération du token JWT
+    $token = JWTAuth::fromUser($user);
+
+    // Retourner un message de succès
+    return response()->json([
+        'success' => true,
+        'message' => 'Utilisateur Admin créé avec succès !',
+        'user' => $user,
+        'token' => $token
+    ], 201);
+}
+
 
 }
 
