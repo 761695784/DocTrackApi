@@ -2,33 +2,32 @@
 
 namespace App\Mail;
 
-use App\Models\Document;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Content;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Contracts\Queue\ShouldQueue;
 
 class DocumentPublishedNotification extends Mailable
 {
     use Queueable, SerializesModels;
 
     public $document;
-    public $Phone; // Ajoutez la propriété Phone
+    public $Phone;
+    public $documentUrl;  // Ajout de cette propriété
 
-    public function __construct($document, $Phone)
+    public function __construct($document, $Phone, $documentUrl)
     {
         $this->document = $document;
-        $this->Phone = $Phone;
+        $this->Phone = $Phone;        // Certains paramètres changés pour la cohérence
+        $this->documentUrl = $documentUrl; // Initialisez la propriété
     }
 
     public function build()
     {
-        return $this->subject('Document publié correspondant à votre déclaration de perte')
+        return $this->subject('Correspondance à votre déclaration de perte')
                     ->markdown('emails.document.published', [
                         'document' => $this->document,
-                        'phone' => $this->Phone // Corrigez ici
+                        'Phone' => $this->Phone,
+                        'documentUrl' => $this->documentUrl, // Passez l'URL
                     ]);
     }
 }

@@ -55,13 +55,12 @@ class DeclarationDePerteController extends Controller
 
     private function sendNotificationEmail($user, $document)
     {
-        // Accédez au téléphone du propriétaire du document
-        $Phone = $document->user->Phone; // Vérifiez que la relation 'user' est correcte
+        $Phone = $document->user->Phone; // Récupérer le numéro de téléphone du propriétaire du document
+        $documentUrl = route('documents.show', $document->id); // Générer l'URL pour afficher le document
 
-         // Envoyer le mail avec le document et le numéro de téléphone du propriétaire
-    Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone));
+        // Envoyer le mail avec le document, le numéro de téléphone et l'URL
+        Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
     }
-
      /**
      * Afficher toutes les déclarations de perte (uniquement pour les admins).
      */

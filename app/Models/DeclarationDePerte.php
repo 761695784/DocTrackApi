@@ -23,10 +23,11 @@ class DeclarationDePerte extends Model
 
     private function sendNotificationEmail($user, $document)
     {
-        // Récupérer le numéro de téléphone du propriétaire du document
-        $Phone = $document->user->Phone; // Assurez-vous que la relation `user` est définie
+        // Récupérer le numéro de téléPhone du propriétaire du document
+        $Phone = $document->user->Phone; // Assurez-vous que 'Phone' est bien le nom de votre colonne
+        $documentUrl = route('documents.show', $document->id); // Créer l'URL pour afficher le document
 
-        // Envoyer l'email avec le document et le numéro de téléphone du propriétaire
-        Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone));
+        // Envoyer le mail avec le document et le numéro de téléPhone
+        Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
     }
 }

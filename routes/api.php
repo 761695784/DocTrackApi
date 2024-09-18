@@ -30,6 +30,6 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('comments', CommentaireController::class);
 
 });
-// Route::apiResource('document', DocumentController::class);
+Route::apiResource('document', DocumentController::class);
 
 
