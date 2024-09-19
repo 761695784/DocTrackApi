@@ -57,7 +57,7 @@ namespace App\Http\Controllers\Annotations ;
 
  * @OA\GET(
  *     path="/api/logout",
- *     summary="Logout",
+ *     summary="logout SimpleUser",
  *     description="",
  *         security={
  *    {       "BearerAuth": {}}

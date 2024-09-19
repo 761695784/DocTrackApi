@@ -23,6 +23,101 @@
         "multipart/form-data"
     ],
     "paths": {
+        "/api/register": {
+            "post": {
+                "summary": "Register Simple User",
+                "description": "",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": ""
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": ""
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": ""
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": ""
+                            }
+                        }
+                    }
+                },
+                "tags": [
+                    "Authentification"
+                ],
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "User-Agent",
+                        "type": "string"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "FirstName": {
+                                        "type": "string"
+                                    },
+                                    "LastName": {
+                                        "type": "string"
+                                    },
+                                    "Adress": {
+                                        "type": "string"
+                                    },
+                                    "Phone": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            "example": {
+                                "FirstName": "THERESE",
+                                "LastName": "MENDY",
+                                "Adress": "Ziguinchor",
+                                "Phone": "761695784",
+                                "email": "malangmarna2018@gmail.com",
+                                "password": "password123",
+                                "password_confirmation": "password123"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/login": {
             "post": {
                 "summary": "Login",
@@ -100,7 +195,7 @@
         },
         "/api/logout": {
             "get": {
-                "summary": "Logout",
+                "summary": "logout SimpleUser",
                 "description": "",
                 "responses": {
                     "200": {
@@ -141,6 +236,76 @@
                         "type": "string"
                     }
                 ]
+            }
+        },
+        "/api/change-password": {
+            "put": {
+                "summary": "Changing Password",
+                "description": "",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": ""
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": ""
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": ""
+                            }
+                        }
+                    }
+                },
+                "tags": [
+                    "Authentification"
+                ],
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "User-Agent",
+                        "type": "string"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "current_password": {
+                                        "type": "string"
+                                    },
+                                    "new_password": {
+                                        "type": "string"
+                                    },
+                                    "new_password_confirmation": {
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            "example": {
+                                "current_password": "password123",
+                                "new_password": "Malcom123",
+                                "new_password_confirmation": "Malcom123"
+                            }
+                        }
+                    }
+                }
             }
         },
         "/api/users": {
@@ -575,171 +740,6 @@
                 ]
             }
         },
-        "/api/register": {
-            "post": {
-                "summary": "Register Simple User",
-                "description": "",
-                "responses": {
-                    "201": {
-                        "description": "Created successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {},
-                                "example": ""
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "content": {
-                            "application/json": {
-                                "schema": {},
-                                "example": ""
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "content": {
-                            "application/json": {
-                                "schema": {},
-                                "example": ""
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "content": {
-                            "application/json": {
-                                "schema": {},
-                                "example": ""
-                            }
-                        }
-                    }
-                },
-                "tags": [
-                    "Authentification"
-                ],
-                "parameters": [
-                    {
-                        "in": "header",
-                        "name": "User-Agent",
-                        "type": "string"
-                    }
-                ],
-                "requestBody": {
-                    "content": {
-                        "multipart/form-data": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "FirstName": {
-                                        "type": "string"
-                                    },
-                                    "LastName": {
-                                        "type": "string"
-                                    },
-                                    "Adress": {
-                                        "type": "string"
-                                    },
-                                    "Phone": {
-                                        "type": "string"
-                                    },
-                                    "email": {
-                                        "type": "string"
-                                    },
-                                    "password": {
-                                        "type": "string"
-                                    },
-                                    "password_confirmation": {
-                                        "type": "string"
-                                    }
-                                }
-                            },
-                            "example": {
-                                "FirstName": "THERESE",
-                                "LastName": "MENDY",
-                                "Adress": "Ziguinchor",
-                                "Phone": "761695784",
-                                "email": "malangmarna2018@gmail.com",
-                                "password": "password123",
-                                "password_confirmation": "password123"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/change-password": {
-            "put": {
-                "summary": "Changing Password",
-                "description": "",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "application/json": {
-                                "schema": {},
-                                "example": ""
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "content": {
-                            "application/json": {
-                                "schema": {},
-                                "example": ""
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {},
-                                "example": ""
-                            }
-                        }
-                    }
-                },
-                "tags": [
-                    "Authentification"
-                ],
-                "parameters": [
-                    {
-                        "in": "header",
-                        "name": "User-Agent",
-                        "type": "string"
-                    }
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "current_password": {
-                                        "type": "string"
-                                    },
-                                    "new_password": {
-                                        "type": "string"
-                                    },
-                                    "new_password_confirmation": {
-                                        "type": "string"
-                                    }
-                                }
-                            },
-                            "example": {
-                                "current_password": "password123",
-                                "new_password": "Malcom123",
-                                "new_password_confirmation": "Malcom123"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/document": {
             "get": {
                 "summary": "Reading all publication",
@@ -1058,6 +1058,49 @@
             }
         },
         "/api/comments": {
+            "get": {
+                "summary": "Reading all commentaire",
+                "description": "",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": ""
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": ""
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": ""
+                            }
+                        }
+                    }
+                },
+                "tags": [
+                    "Comment a publication"
+                ],
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "User-Agent",
+                        "type": "string"
+                    }
+                ]
+            },
             "post": {
                 "summary": "Create comment",
                 "description": "",
@@ -1128,7 +1171,7 @@
                             },
                             "example": {
                                 "contenu": "Bonjour Malang je connais therese  elle habite a zig voici son numero tu peux l'appeller 775402797",
-                                "document_id": "9",
+                                "document_id": "7",
                                 "": ""
                             }
                         }
