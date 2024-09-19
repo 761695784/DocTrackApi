@@ -25,22 +25,6 @@ namespace App\Http\Controllers\Annotations ;
 
  *
 
- * @OA\GET(
- *     path="/api/users",
- *     summary="reading alll user only by Admin",
- *     description="",
- *         security={
- *    {       "BearerAuth": {}}
- *         },
- * @OA\Response(response="200", description="OK"),
- * @OA\Response(response="404", description="Not Found"),
- * @OA\Response(response="500", description="Internal Server Error"),
- *     @OA\Parameter(in="header", name="User-Agent", required=false, @OA\Schema(type="string")
- * ),
- *     tags={"Authentification"},
-*),
-
-
  * @OA\POST(
  *     path="/api/register",
  *     summary="Register Simple User",

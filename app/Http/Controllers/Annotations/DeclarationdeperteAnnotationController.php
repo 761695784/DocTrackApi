@@ -55,17 +55,16 @@ namespace App\Http\Controllers\Annotations ;
 *),
 
 
- * @OA\POST(
+ * @OA\GET(
  *     path="/api/logout",
  *     summary="Logout",
  *     description="",
  *         security={
  *    {       "BearerAuth": {}}
  *         },
- * @OA\Response(response="201", description="Created successfully"),
- * @OA\Response(response="400", description="Bad Request"),
- * @OA\Response(response="401", description="Unauthorized"),
- * @OA\Response(response="403", description="Forbidden"),
+ * @OA\Response(response="200", description="OK"),
+ * @OA\Response(response="404", description="Not Found"),
+ * @OA\Response(response="500", description="Internal Server Error"),
  *     @OA\Parameter(in="header", name="User-Agent", required=false, @OA\Schema(type="string")
  * ),
  *     tags={"Declaration de perte "},
@@ -74,7 +73,7 @@ namespace App\Http\Controllers\Annotations ;
 
  * @OA\GET(
  *     path="/api/declarations",
- *     summary="reading all declaration only Admin role",
+ *     summary="Reading all declaration only Admin ",
  *     description="",
  *         security={
  *    {       "BearerAuth": {}}
@@ -107,7 +106,7 @@ namespace App\Http\Controllers\Annotations ;
 
  * @OA\POST(
  *     path="/api/declarations",
- *     summary="create a declaration",
+ *     summary="Create a declaration",
  *     description="",
  *         security={
  *    {       "BearerAuth": {}}
@@ -139,7 +138,7 @@ namespace App\Http\Controllers\Annotations ;
 
  * @OA\DELETE(
  *     path="/api/declarations/1",
- *     summary="deleting a declaration by admin",
+ *     summary="Delete a declaration by Admin",
  *     description="",
  *         security={
  *    {       "BearerAuth": {}}

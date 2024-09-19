@@ -26,24 +26,8 @@ namespace App\Http\Controllers\Annotations ;
  *
 
  * @OA\GET(
- *     path="/api/document-types",
- *     summary="reading alll document types",
- *     description="",
- *         security={
- *    {       "BearerAuth": {}}
- *         },
- * @OA\Response(response="200", description="OK"),
- * @OA\Response(response="404", description="Not Found"),
- * @OA\Response(response="500", description="Internal Server Error"),
- *     @OA\Parameter(in="header", name="User-Agent", required=false, @OA\Schema(type="string")
- * ),
- *     tags={"Publication de document"},
-*),
-
-
- * @OA\GET(
  *     path="/api/document",
- *     summary="reading alll publication",
+ *     summary="Reading all publication",
  *     description="",
  *         security={
  *    {       "BearerAuth": {}}
@@ -76,7 +60,7 @@ namespace App\Http\Controllers\Annotations ;
 
  * @OA\POST(
  *     path="/api/documents",
- *     summary="create a publication",
+ *     summary="Create a publication",
  *     description="",
  *         security={
  *    {       "BearerAuth": {}}
@@ -143,7 +127,7 @@ namespace App\Http\Controllers\Annotations ;
 
  * @OA\DELETE(
  *     path="/api/documents/5",
- *     summary="deleting a publication by admin",
+ *     summary="delete a publication by Admin",
  *     description="",
  *         security={
  *    {       "BearerAuth": {}}

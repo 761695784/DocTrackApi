@@ -25,9 +25,25 @@ namespace App\Http\Controllers\Annotations ;
 
  *
 
+ * @OA\GET(
+ *     path="/api/users",
+ *     summary="Reading all user only by Admin",
+ *     description="",
+ *         security={
+ *    {       "BearerAuth": {}}
+ *         },
+ * @OA\Response(response="200", description="OK"),
+ * @OA\Response(response="404", description="Not Found"),
+ * @OA\Response(response="500", description="Internal Server Error"),
+ *     @OA\Parameter(in="header", name="User-Agent", required=false, @OA\Schema(type="string")
+ * ),
+ *     tags={"User Management"},
+*),
+
+
  * @OA\POST(
  *     path="/api/create-admin",
- *     summary="Creer un Admin",
+ *     summary="Create an Admin",
  *     description="",
  *         security={
  *    {       "BearerAuth": {}}

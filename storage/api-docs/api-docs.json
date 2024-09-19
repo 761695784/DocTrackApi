@@ -98,9 +98,99 @@
                 }
             }
         },
+        "/api/logout": {
+            "get": {
+                "summary": "Logout",
+                "description": "",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": ""
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": ""
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": ""
+                            }
+                        }
+                    }
+                },
+                "tags": [
+                    "Declaration de perte "
+                ],
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "User-Agent",
+                        "type": "string"
+                    }
+                ]
+            }
+        },
+        "/api/users": {
+            "get": {
+                "summary": "Reading all user only by Admin",
+                "description": "",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": ""
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": ""
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": ""
+                            }
+                        }
+                    }
+                },
+                "tags": [
+                    "User Management"
+                ],
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "User-Agent",
+                        "type": "string"
+                    }
+                ]
+            }
+        },
         "/api/create-admin": {
             "post": {
-                "summary": "Creer un Admin",
+                "summary": "Create an Admin",
                 "description": "",
                 "responses": {
                     "201": {
@@ -249,7 +339,7 @@
         },
         "/api/document-types": {
             "get": {
-                "summary": "reading alll document types",
+                "summary": "Reading all document types",
                 "description": "",
                 "responses": {
                     "200": {
@@ -281,7 +371,7 @@
                     }
                 },
                 "tags": [
-                    "Publication de document"
+                    "CRUD DocType"
                 ],
                 "parameters": [
                     {
@@ -363,60 +453,6 @@
                         }
                     }
                 }
-            }
-        },
-        "/api/logout": {
-            "post": {
-                "summary": "Logout",
-                "description": "",
-                "responses": {
-                    "201": {
-                        "description": "Created successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {},
-                                "example": ""
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "content": {
-                            "application/json": {
-                                "schema": {},
-                                "example": ""
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "content": {
-                            "application/json": {
-                                "schema": {},
-                                "example": ""
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "content": {
-                            "application/json": {
-                                "schema": {},
-                                "example": ""
-                            }
-                        }
-                    }
-                },
-                "tags": [
-                    "Declaration de perte "
-                ],
-                "parameters": [
-                    {
-                        "in": "header",
-                        "name": "User-Agent",
-                        "type": "string"
-                    }
-                ]
             }
         },
         "/api/document-types/13": {
@@ -529,51 +565,6 @@
                 },
                 "tags": [
                     "CRUD DocType"
-                ],
-                "parameters": [
-                    {
-                        "in": "header",
-                        "name": "User-Agent",
-                        "type": "string"
-                    }
-                ]
-            }
-        },
-        "/api/users": {
-            "get": {
-                "summary": "reading alll user only by Admin",
-                "description": "",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "application/json": {
-                                "schema": {},
-                                "example": ""
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "content": {
-                            "application/json": {
-                                "schema": {},
-                                "example": ""
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {},
-                                "example": ""
-                            }
-                        }
-                    }
-                },
-                "tags": [
-                    "Authentification"
                 ],
                 "parameters": [
                     {
@@ -751,7 +742,7 @@
         },
         "/api/document": {
             "get": {
-                "summary": "reading alll publication",
+                "summary": "Reading all publication",
                 "description": "",
                 "responses": {
                     "200": {
@@ -833,7 +824,7 @@
         },
         "/api/documents": {
             "post": {
-                "summary": "create a publication",
+                "summary": "Create a publication",
                 "description": "",
                 "responses": {
                     "201": {
@@ -1014,7 +1005,7 @@
         },
         "/api/documents/5": {
             "delete": {
-                "summary": "deleting a publication by admin",
+                "summary": "delete a publication by Admin",
                 "description": "",
                 "responses": {
                     "204": {
@@ -1147,7 +1138,7 @@
         },
         "/api/declarations": {
             "get": {
-                "summary": "reading all declaration only Admin role",
+                "summary": "Reading all declaration only Admin ",
                 "description": "",
                 "responses": {
                     "200": {
@@ -1227,7 +1218,7 @@
                 }
             },
             "post": {
-                "summary": "create a declaration",
+                "summary": "Create a declaration",
                 "description": "",
                 "responses": {
                     "201": {
@@ -1310,7 +1301,7 @@
         },
         "/api/declarations/1": {
             "delete": {
-                "summary": "deleting a declaration by admin",
+                "summary": "Delete a declaration by Admin",
                 "description": "",
                 "responses": {
                     "204": {
