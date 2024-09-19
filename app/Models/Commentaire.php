@@ -9,7 +9,7 @@ class Commentaire extends Model
 {
     use HasFactory;
     protected $guarded = [];
-    public function documents() {
+    public function document() {
         return $this->belongsTo(Document::class);
     }
     public function user() {

@@ -16,11 +16,13 @@ class DocumentController extends Controller
      * Display a listing of the resource.
      */
     public function index()
-    {
-        $documents = Document::all(); // Récupère tous les documents
-        return response()->json($documents); // Retourne les documents en JSON
-    }
+{
+    // Récupère tous les documents avec les informations de l'utilisateur associé
+    $documents = Document::with('user')->get();
 
+    // Retourne les documents en JSON, y compris les informations de l'utilisateur
+    return response()->json($documents);
+} 
     /**
      * Store a newly created resource in storage.
      */

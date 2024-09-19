@@ -62,5 +62,8 @@ class User extends Authenticatable  implements JWTSubject
    public function declarations(){
      return $this->hasMany(DeclarationDePerte::class);
    }
+   public function commentaires(){
+     return $this->hasMany(Commentaire::class);
+   }
 
 }

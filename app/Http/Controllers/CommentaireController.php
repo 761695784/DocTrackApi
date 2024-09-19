@@ -13,10 +13,11 @@ class CommentaireController extends Controller
      */
     public function index()
     {
-        // Récupérer et retourner tous les commentaires
-        $commentaires = Commentaire::with('user', 'document')->get();
+        // Récupérer et retourner tous les commentaires avec leurs utilisateurs et documents associés
+        $commentaires = Commentaire::with(['user', 'document'])->get(); // Cela devrait fonctionner maintenant
         return response()->json($commentaires);
     }
+
 
     /**
      * Store a newly created resource in storage.
@@ -54,10 +55,12 @@ class CommentaireController extends Controller
      */
     public function show(Commentaire $commentaire)
     {
-        // Récupérer et retourner le commentaire spécifique
+        // Récupérer le commentaire spécifique avec l'utilisateur et le document
+        $commentaire = Commentaire::with(['user', 'document'])->findOrFail($commentaire->id);
+
+        // Retourner le commentaire en JSON
         return response()->json($commentaire);
     }
-
     /**
      * Remove the specified resource from storage.
      */
