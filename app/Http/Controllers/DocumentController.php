@@ -6,6 +6,7 @@ use App\Models\Document;
 use App\Models\DeclarationDePerte;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\StoreDocumentRequest;
 use App\Mail\DocumentPublishedNotification;
 use App\Http\Requests\UpdateDocumentRequest;
@@ -22,7 +23,7 @@ class DocumentController extends Controller
 
     // Retourne les documents en JSON, y compris les informations de l'utilisateur
     return response()->json($documents);
-} 
+}
     /**
      * Store a newly created resource in storage.
      */
@@ -30,11 +31,8 @@ class DocumentController extends Controller
     {
         // Valider la demande et récupérer le fichier image
         $validatedData = $request->validated();
-        $imagePath = $request->file('image')->store('documents'); // Stocker le fichier
-
-        // Créer un nouveau document dans la base de données
-        $document = Document::create([
-            'image' => $imagePath,
+        $document = new Document();
+        $document->fill([
             'OwnerFirstName' => $validatedData['OwnerFirstName'],
             'OwnerLastName' => $validatedData['OwnerLastName'],
             'Location' => $validatedData['Location'],
@@ -42,6 +40,20 @@ class DocumentController extends Controller
             'document_type_id' => $validatedData['document_type_id'],
             'user_id' => Auth::id(),
         ]);
+
+        // Vérifie si un fichier image a été téléversé et est valide
+        if ($request->hasFile('image') && $request->file('image')->isValid()) {
+            // Enregistre l'image dans le dossier 'documents' du système de fichiers public
+            $path = $request->file('image')->store('documents', 'public');
+            // Génère l'URL accessible publiquement pour l'image
+            $document->image = Storage::url($path);
+        } else {
+            // Optionnel : enregistrer une erreur ou gérer le cas où aucun fichier valide n'est fourni
+            return response()->json(['error' => 'Aucun fichier image valide fourni'], 400);
+        }
+
+        // Enregistre la ressource dans la base de données
+        $document->save();
 
         // Recherche des déclarations de perte correspondantes
         $declarations = DeclarationDePerte::where('FirstNameIndoc', $document->OwnerFirstName)

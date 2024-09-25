@@ -28,7 +28,7 @@ class StoreDeclarationDePerteRequest extends FormRequest
             'Title' => 'required|string|max:255',
             'FirstNameInDoc' => 'required|string',
             'LastNameInDoc' => 'required|string',
-            'document_type_id' => 'required|exists:documents,id',
+            'document_type_id' => 'required',
         ];
     }
 }
