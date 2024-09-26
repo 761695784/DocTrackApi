@@ -98,6 +98,15 @@ class DocumentController extends Controller
      */
     public function update(UpdateDocumentRequest $request, Document $document)
     {
+        // Vérifiez si l'utilisateur authentifié est le propriétaire du document
+        if (Auth::id() !== $document->user_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous n\'êtes pas autorisé à mettre à jour ce document.'
+            ], 403); // Code 403 Forbidden
+        }
+
+        // Met à jour le document avec les données validées
         $document->update($request->validated());
 
         return response()->json([
@@ -142,4 +151,14 @@ class DocumentController extends Controller
         return response()->json(['message' => 'Demande de restitution envoyée avec succès.']);
     }
 
+
+
+    public function OwnPub()
+{
+    // Récupère uniquement les documents de l'utilisateur connecté
+    $documents = Document::where('user_id', Auth::id())->with('user')->get();
+
+    // Retourne les documents en JSON, y compris les informations de l'utilisateur
+    return response()->json($documents);
+}
 }

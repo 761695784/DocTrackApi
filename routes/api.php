@@ -29,6 +29,8 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('declarations', DeclarationDePerteController::class);
     Route::apiResource('comments', CommentaireController::class);
     Route::post('documents/{id}/restitution', [DocumentController::class, 'requestRestitution']);
+    route::get('mypub',[DocumentController::class, 'OwnPub']);
+    Route::put('documents/{id}', [DocumentController::class,'update'] );
 
 
 });
