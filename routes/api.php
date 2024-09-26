@@ -28,11 +28,14 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('documents', DocumentController::class);
     Route::apiResource('declarations', DeclarationDePerteController::class);
     Route::apiResource('comments', CommentaireController::class);
+    Route::post('documents/{id}/restitution', [DocumentController::class, 'requestRestitution']);
+
 
 });
 Route::apiResource('document', DocumentController::class);
 Route::get('documents/{document_id}/comments', [CommentaireController::class, 'getCommentairesByDocument']);
 Route::get('documents/{id}', [DocumentController::class, 'show']);
+
 
 
 

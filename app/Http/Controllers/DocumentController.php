@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
 use App\Models\Document;
 use App\Models\DeclarationDePerte;
 use Illuminate\Support\Facades\Auth;
@@ -10,7 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\StoreDocumentRequest;
 use App\Mail\DocumentPublishedNotification;
 use App\Http\Requests\UpdateDocumentRequest;
-
+use App\Notifications\RestitutionRequestNotification;
 class DocumentController extends Controller
 {
     /**
@@ -118,4 +119,27 @@ class DocumentController extends Controller
             'message' => 'Document supprimé avec succès.'
         ]);
     }
+
+
+    /**
+     * Gérer la demande de restitution.
+     */
+    public function requestRestitution($documentId)
+    {
+        // Récupérer le document concerné
+        $document = Document::findOrFail($documentId);
+
+        // L'utilisateur connecté qui clique sur "Restituer"
+        $fromUser = Auth::user();
+
+        // L'utilisateur qui a publié le document
+        $toUser = $document->user;
+
+        // Envoyer la notification par email
+        $toUser->notify(new RestitutionRequestNotification($fromUser, $document));
+
+        // Retourner une réponse JSON
+        return response()->json(['message' => 'Demande de restitution envoyée avec succès.']);
+    }
+
 }
