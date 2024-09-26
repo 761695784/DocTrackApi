@@ -83,15 +83,14 @@ class DocumentController extends Controller
             /**
      * Display the specified resource.
      */
-    public function show(Document $document)
-    {
-        // return response()->json($document); // Retourne les détails du document
-        $document = Document::findOrFail($document);
-        return response()->json([
-            'success' => true,
-            'data' => $document
-        ]);
+    public function show($id) {
+        $document = Document::with('user')->find($id); // Charge les détails de l'utilisateur associé
+        if (!$document) {
+            return response()->json(['message' => 'Document not found'], 404);
+        }
+        return response()->json($document);
     }
+
 
     /**
      * Update the specified resource in storage.

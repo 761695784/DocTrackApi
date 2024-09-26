@@ -31,5 +31,8 @@ Route::middleware('auth:api')->group(function () {
 
 });
 Route::apiResource('document', DocumentController::class);
+Route::get('documents/{document_id}/comments', [CommentaireController::class, 'getCommentairesByDocument']);
+Route::get('documents/{id}', [DocumentController::class, 'show']);
+
 
 

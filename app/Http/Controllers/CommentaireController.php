@@ -82,4 +82,16 @@ class CommentaireController extends Controller
             'message' => 'Commentaire supprimé avec succès.'
         ]);
     }
+
+    public function getCommentairesByDocument($document_id)
+{
+    // Récupérer les commentaires pour un document spécifique avec les informations sur l'utilisateur
+    $commentaires = Commentaire::with('user')
+        ->where('document_id', $document_id)
+        ->get();
+
+    // Retourner les commentaires en JSON
+    return response()->json($commentaires);
+}
+
 }
