@@ -22,13 +22,15 @@ class UpdateDocumentRequest extends FormRequest
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
-    {  return [
-        'image' => 'required|file|mimes:jpeg,png,jpg,pdf|max:2048',
-        'OwnerFirstName' => 'required|string|max:255',
-        'OwnerLastName' => 'required|string|max:255',
-        'statut' => 'required|in:récupéré,non récupéré',
-        'Location' => 'required|string|max:255',
-        'document_type_id' => 'required|exists:document_types,id', // Valider que le type de document existe
-    ];
+    {
+          return [
+            // Les règles ici sont optionnelles sauf pour le statut
+            'image' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'OwnerFirstName' => 'nullable|string|max:255',
+            'OwnerLastName' => 'nullable|string|max:255',
+            'statut' => 'required|in:récupéré,non récupéré', // Le seul champ obligatoire
+            'Location' => 'nullable|string|max:255',
+            'document_type_id' => 'nullable|exists:document_types,id', // Optionnel mais doit exister si fourni
+        ];
     }
 }

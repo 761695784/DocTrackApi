@@ -25,18 +25,22 @@ Route::post('create-admin', [AuthController::class, 'createAdmin'])->middleware(
 
 Route::middleware('auth:api')->group(function () {
     Route::apiResource('document-types', DocumentTypeController::class);
-    Route::apiResource('documents', DocumentController::class);
+    Route::apiResource('documents', DocumentController::class)->only('store','show','index','destroy');
     Route::apiResource('declarations', DeclarationDePerteController::class);
     Route::apiResource('comments', CommentaireController::class);
     Route::post('documents/{id}/restitution', [DocumentController::class, 'requestRestitution']);
     route::get('mypub',[DocumentController::class, 'OwnPub']);
-    Route::put('documents/{id}', [DocumentController::class,'update'] );
+
 
 
 });
 Route::apiResource('document', DocumentController::class);
 Route::get('documents/{document_id}/comments', [CommentaireController::class, 'getCommentairesByDocument']);
 Route::get('documents/{id}', [DocumentController::class, 'show']);
+Route::put('document/{id}', [DocumentController::class,'update'] );
+// Route::delete('document/{id}', [DocumentController::class, 'destroy']);
+
+
 
 
 

@@ -63,8 +63,6 @@ class DocumentController extends Controller
 
         foreach ($declarations as $declaration) {
             $user = $declaration->user; // Récupérer l'utilisateur qui a fait la déclaration
-            // $Phone = $document->Phone; // Numéro de téléPhone de l'auteur de la publication
-            // $documentUrl = route('documents.show', $document->id); // URL de la publication
             $Phone = $document->user->Phone; // Récupérer le numéro de téléphone du propriétaire du document
             $documentUrl = route('documents.show', $document->id); // Générer l'URL pour afficher le document
 
@@ -107,28 +105,64 @@ class DocumentController extends Controller
         }
 
         // Met à jour le document avec les données validées
-        $document->update($request->validated());
+        $validatedData = $request->validated(); // Valider la requête
+
+        // Mise à jour uniquement des champs présents dans la requête
+        $document->update($validatedData);
 
         return response()->json([
             'success' => true,
             'message' => 'Document mis à jour avec succès.',
-            'document' => $document
+            'document' => $document // Retourner le document mis à jour
         ]);
     }
 
     /**
      * Remove the specified resource from storage.
      */
+    // public function destroy(Document $document)
+    // {
+    //     // Vérifier si l'utilisateur authentifié est le propriétaire du document ou un administrateur
+    //     if (Auth::user()->role === 'Admin' || Auth::id() === $document->user_id) {
+    //         $document->delete();
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Document supprimé avec succès.'
+    //         ]);
+    //     }
+
+    //     return response()->json([
+    //         'success' => false,
+    //         'message' => 'Vous n\'êtes pas autorisé à supprimer ce document.'
+    //     ], 403); // Code 403 Forbidden
+    // }
+
     public function destroy(Document $document)
-    {
-        $document->delete();
+{
+    // Vérifier si l'utilisateur est authentifié
+    if (Auth::check()) {
+        // Vérifier si l’utilisateur authentifié est le propriétaire du document ou un administrateur
+        if (Auth::user()->role === 'Admin' || Auth::id() === $document->user_id) {
+            $document->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Document supprimé avec succès.'
+            ]);
+        }
 
         return response()->json([
-            'success' => true,
-            'message' => 'Document supprimé avec succès.'
-        ]);
+            'success' => false,
+            'message' => 'Vous n\'êtes pas autorisé à supprimer ce document.'
+        ], 403); // Code 403 Forbidden
     }
 
+    return response()->json([
+        'success' => false,
+        'message' => 'Utilisateur non authentifié.'
+    ], 401); // Code 401 Unauthorized
+}
 
     /**
      * Gérer la demande de restitution.
