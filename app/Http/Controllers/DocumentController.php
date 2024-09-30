@@ -118,27 +118,7 @@ class DocumentController extends Controller
             'document' => $document // Retourner le document mis à jour
         ]);
     }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    // public function destroy(Document $document)
-    // {
-    //     // Vérifier si l'utilisateur authentifié est le propriétaire du document ou un administrateur
-    //     if (Auth::user()->role === 'Admin' || Auth::id() === $document->user_id) {
-    //         $document->delete();
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'message' => 'Document supprimé avec succès.'
-    //         ]);
-    //     }
-
-    //     return response()->json([
-    //         'success' => false,
-    //         'message' => 'Vous n\'êtes pas autorisé à supprimer ce document.'
-    //     ], 403); // Code 403 Forbidden
-    // }
+    
 
     public function destroy($id)
     {
