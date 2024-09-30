@@ -2,65 +2,76 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\EmailLog;
+use App\Models\Notification;
 use App\Http\Requests\StoreNotificationRequest;
 use App\Http\Requests\UpdateNotificationRequest;
-use App\Models\Notification;
 
 class NotificationController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
-    {
-        //
-    }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
+     public function showAllEmails()
+{
+    // Récupérer tous les logs d'emails
+    $emailLogs = EmailLog::all();
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreNotificationRequest $request)
-    {
-        //
-    }
+    return response()->json([
+        'success' => true,
+        'data' => $emailLogs->map(function($emailLog) {
+            return [
+                'id' => $emailLog->id,
+                'from' => $emailLog->from,
+                'to' => $emailLog->to,
+                'subject' => $emailLog->subject,
+                'body' => $emailLog->body,
+                'created_at' => $emailLog->created_at,
+            ];
+        })
+    ], 200);
+}
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Notification $notification)
-    {
-        //
-    }
+public function showAllCorrespondenceEmails()
+{
+    // Récupérer tous les logs d'emails de correspondance
+    $correspondenceEmails = EmailLog::where('subject', 'like', 'Correspondance%')->get();
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Notification $notification)
-    {
-        //
-    }
+    return response()->json([
+        'success' => true,
+        'data' => $correspondenceEmails->map(function($emailLog) {
+            return [
+                'id' => $emailLog->id,
+                'from' => $emailLog->from,
+                'to' => $emailLog->to,
+                'subject' => $emailLog->subject,
+                'body' => $emailLog->body,
+                'created_at' => $emailLog->created_at,
+            ];
+        })
+    ], 200);
+}
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateNotificationRequest $request, Notification $notification)
-    {
-        //
-    }
+public function showAllRestitutionEmails()
+{
+    // Récupérer tous les logs d'emails de demande de restitution
+    $restitutionEmails = EmailLog::where('subject', 'like', 'Demande de restitution%')->get();
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Notification $notification)
-    {
-        //
-    }
+    return response()->json([
+        'success' => true,
+        'data' => $restitutionEmails->map(function($emailLog) {
+            return [
+                'id' => $emailLog->id,
+                'from' => $emailLog->from,
+                'to' => $emailLog->to,
+                'subject' => $emailLog->subject,
+                'body' => $emailLog->body,
+                'created_at' => $emailLog->created_at,
+            ];
+        })
+    ], 200);
+}
+
+
 }

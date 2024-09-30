@@ -7,6 +7,8 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\CommentaireController;
 use App\Http\Controllers\DocumentTypeController;
 use App\Http\Controllers\DeclarationDePerteController;
+use App\Http\Controllers\NotificationController;
+use Illuminate\Notifications\Notification;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -33,6 +35,9 @@ Route::middleware('auth:api')->group(function () {
     route::get('mypub',[DocumentController::class, 'OwnPub']);
     Route::get('mydec', [DeclarationDePerteController::class, 'getUserDeclarations']);
 
+    Route::get('/correspondence', [NotificationController::class, 'showAllCorrespondenceEmails']);
+    Route::get('/restitution', [NotificationController::class, 'showAllRestitutionEmails']);
+    Route::get('/emails', [NotificationController::class,'showAllEmails']);
 
 
 
