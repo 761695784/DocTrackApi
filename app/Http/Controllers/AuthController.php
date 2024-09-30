@@ -297,6 +297,50 @@ public function createAdmin(Request $request)
     ], 201);
 }
 
+/**
+ * Méthode pour mettre à jour les informations du profil de l'utilisateur
+ */
+public function updateProfile(Request $request)
+{
+    // Vérifier si l'utilisateur est authentifié
+    if (!Auth::check()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Vous devez être connecté pour modifier votre profil.'
+        ], 401);
+    }
+
+    // Validation des données entrées
+    $validator = Validator::make($request->all(), [
+        'FirstName' => 'sometimes|required|string|max:40',
+        'LastName' => 'sometimes|required|string|max:20',
+        'Adress' => 'sometimes|required|string|max:100',
+        'Phone' => 'sometimes|required|string|max:20',
+        'email' => 'sometimes|required|string|email|max:50|unique:users,email,' . Auth::id(),
+    ]);
+
+    // Gestion des erreurs de validation
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur de validation. Veuillez vérifier les entrées.',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    $user = Auth::user();
+
+    // Mettre à jour les informations de l'utilisateur
+    $user->update($request->only('FirstName', 'LastName', 'Adress', 'Phone', 'email'));
+
+    // Retourner un message de succès
+    return response()->json([
+        'success' => true,
+        'message' => 'Informations du profil mises à jour avec succès.',
+        'user' => $user
+    ], 200);
+}
+
 
 }
 

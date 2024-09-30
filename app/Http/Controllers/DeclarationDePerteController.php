@@ -4,17 +4,17 @@ namespace App\Http\Controllers;
 use App\Models\Document;
 use Illuminate\Http\Request;
 use App\Models\DeclarationDePerte;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\DocumentPublishedNotification;
 use Spatie\Permission\Traits\HasRoles;
+use App\Mail\DocumentPublishedNotification;
 use App\Http\Requests\StoreDeclarationDePerteRequest;
 
 class DeclarationDePerteController extends Controller
 {
     use HasRoles;
     // Autres méthodes...
-
     public function store(StoreDeclarationDePerteRequest $request)
     {
         $user = Auth::user();
@@ -38,12 +38,16 @@ class DeclarationDePerteController extends Controller
         ]);
 
         $matchingDocuments = Document::where('document_type_id', $validatedData['document_type_id'])
-            ->where('OwnerFirstName', $validatedData['FirstNameInDoc'])
-            ->where('OwnerLastName', $validatedData['LastNameInDoc'])
+            ->whereRaw('LOWER(OwnerFirstName) = LOWER(?)', [$validatedData['FirstNameInDoc']])
+            ->whereRaw('LOWER(OwnerLastName) = LOWER(?)', [$validatedData['LastNameInDoc']])
             ->get();
 
         foreach ($matchingDocuments as $document) {
-            $this->sendNotificationEmail($user, $document);
+            try {
+                $this->sendNotificationEmail($user, $document);
+            } catch (\Exception $e) {
+                Log::error('Erreur lors de l\'envoi de la notification : ' . $e->getMessage());
+            }
         }
 
         return response()->json([
@@ -53,29 +57,61 @@ class DeclarationDePerteController extends Controller
         ], 201);
     }
 
-    private function sendNotificationEmail($user, $document)
-    {
-        $Phone = $document->user->Phone; // Récupérer le numéro de téléphone du propriétaire du document
-        $documentUrl = route('documents.show', $document->id); // Générer l'URL pour afficher le document
 
-        // Envoyer le mail avec le document, le numéro de téléphone et l'URL
+  private function sendNotificationEmail($user, $document)
+{
+    $Phone = $document->user->Phone;
+    $documentUrl = route('documents.show', $document->id);
+
+    try {
         Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
+
+        // Ajout des logs pour vérifier les données
+        Log::info('Tentative d\'enregistrement de l\'email log : ', [
+            'from' => config('mail.from.address'),
+            'to' => $user->email,
+            'subject' => 'Correspondance à votre déclaration de perte',
+            'body' => 'Le document publié correspondant aux informations : ' .
+                      $document->OwnerFirstName . ' ' . $document->OwnerLastName .
+                      ' avec le téléphone : ' . $Phone,
+        ]);
+
+        \App\Models\EmailLog::create([
+            'from' => config('mail.from.address'),
+            'to' => $user->email,
+            'subject' => 'Correspondance à votre déclaration de perte',
+            'body' => 'Le document publié correspondant aux informations : ' .
+                      $document->OwnerFirstName . ' ' . $document->OwnerLastName .
+                      ' avec le téléphone : ' . $Phone,
+        ]);
+
+        Log::info('Email log enregistré avec succès.');
+    } catch (\Exception $e) {
+        Log::error('Erreur lors de l\'enregistrement de l\'email log : ' . $e->getMessage());
     }
+}
+
      /**
      * Afficher toutes les déclarations de perte (uniquement pour les admins).
      */
     public function index()
     {
-        // Vérifier si l'utilisateur a le rôle 'Admin'
-        if (!Auth::user() || !Auth::user()->hasRole('Admin')) {
+        $user = Auth::user();
+
+        if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Accès refusé. Vous devez être un administrateur pour voir cette liste.'
-            ], 403);
+                'message' => 'Vous devez être authentifié pour effectuer cette action.'
+            ], 401); // Code 401 Unauthorized
         }
 
-        // Récupérer toutes les déclarations avec les informations de l'utilisateur qui les a créées
-        $declarations = DeclarationDePerte::with('user')->get(); // Charger la relation 'user'
+        // Si l'utilisateur est un administrateur, récupérer toutes les déclarations
+        if ($user->hasRole('Admin')) {
+            $declarations = DeclarationDePerte::with('user')->get();
+        } else {
+            // Si l'utilisateur est un simple utilisateur, ne récupérer que ses propres déclarations
+            $declarations = DeclarationDePerte::with('user')->where('user_id', $user->id)->get();
+        }
 
         return response()->json([
             'success' => true,
@@ -83,46 +119,81 @@ class DeclarationDePerteController extends Controller
         ]);
     }
 
-    public function show($id)
-    {
-        // Vérifier si l'utilisateur a le rôle 'Admin'
-        if (!Auth::user() || !Auth::user()->hasRole('Admin')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Accès refusé. Vous devez être un administrateur pour voir cette déclaration.'
-            ], 403);
-        }
-
-        // Récupérer la déclaration de perte avec les informations de l'utilisateur
-        $declaration = DeclarationDePerte::with('user')->findOrFail($id); // Charger la relation 'user'
-
-        return response()->json([
-            'success' => true,
-            'data' => $declaration
-        ]);
-    }
-
-    public function destroy($id)
+    public function getUserDeclarations()
 {
-    // Vérifier si l'utilisateur a le rôle 'Admin'
-    if (!Auth::user() || !Auth::user()->hasRole('Admin')) {
+    // Vérifier si l'utilisateur est authentifié
+    $user = Auth::user();
+
+    if (!$user) {
         return response()->json([
             'success' => false,
-            'message' => 'Accès refusé. Vous devez être un administrateur pour supprimer cette déclaration.'
-        ], 403);
+            'message' => 'Vous devez être authentifié pour voir vos déclarations.'
+        ], 401);
     }
 
-    // Trouver la déclaration de perte par son ID
-    $declaration = DeclarationDePerte::findOrFail($id);
-
-    // Supprimer la déclaration
-    $declaration->delete();
+    // Récupérer les déclarations faites par l'utilisateur connecté
+    $declarations = DeclarationDePerte::where('user_id', $user->id)->get();
 
     return response()->json([
         'success' => true,
-        'message' => 'Déclaration de perte supprimée avec succès.'
+        'data' => $declarations
     ]);
 }
+
+    public function show($id)
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous devez être authentifié pour effectuer cette action.'
+            ], 401); // Code 401 Unauthorized
+        }
+
+        $declaration = DeclarationDePerte::with('user')->findOrFail($id);
+
+        // Si l'utilisateur est un simple utilisateur, vérifier qu'il est propriétaire de la déclaration
+        if ($user->hasRole('Admin') || $declaration->user_id === $user->id) {
+            return response()->json([
+                'success' => true,
+                'data' => $declaration
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Accès refusé. Vous ne pouvez voir que vos propres déclarations.'
+        ], 403);
+    }
+
+    public function destroy($id)
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous devez être authentifié pour effectuer cette action.'
+            ], 401); // Code 401 Unauthorized
+        }
+
+        $declaration = DeclarationDePerte::findOrFail($id);
+
+        // Si l'utilisateur est un simple utilisateur, vérifier qu'il est propriétaire de la déclaration
+        if ($user->hasRole('Admin') || $declaration->user_id === $user->id) {
+            $declaration->delete();
+            return response()->json([
+                'success' => true,
+                'message' => 'Déclaration de perte supprimée avec succès.'
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Accès refusé. Vous ne pouvez supprimer que vos propres déclarations.'
+        ], 403);
+    }
 
 
 }

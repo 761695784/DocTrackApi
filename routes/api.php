@@ -21,6 +21,7 @@ Route::get('/users', [AuthController::class, 'getAllUsersWithRoles'])->middlewar
 Route::put('change-password', [AuthController::class, 'changePassword'])->middleware('auth:api');
 Route::delete('users/{id}', [AuthController::class, 'deleteUser'])->middleware('auth:api');
 Route::post('create-admin', [AuthController::class, 'createAdmin'])->middleware('auth:api');
+Route::put('profil', [AuthController::class, 'updateProfile'])->middleware('auth:api');
 
 
 Route::middleware('auth:api')->group(function () {
@@ -30,6 +31,8 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('comments', CommentaireController::class);
     Route::post('documents/{id}/restitution', [DocumentController::class, 'requestRestitution']);
     route::get('mypub',[DocumentController::class, 'OwnPub']);
+    Route::get('mydec', [DeclarationDePerteController::class, 'getUserDeclarations']);
+
 
 
 

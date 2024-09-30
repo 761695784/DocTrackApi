@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Document;
+use Spatie\Permission\Traits\HasRoles;
 use App\Models\DeclarationDePerte;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -56,10 +57,11 @@ class DocumentController extends Controller
         // Enregistre la ressource dans la base de données
         $document->save();
 
-        // Recherche des déclarations de perte correspondantes
-        $declarations = DeclarationDePerte::where('FirstNameIndoc', $document->OwnerFirstName)
-            ->where('LastNameIndoc', $document->OwnerLastName)
+        // Recherche des déclarations de perte correspondantes (insensible à la casse)
+        $declarations = DeclarationDePerte::whereRaw('LOWER(FirstNameIndoc) = ?', [strtolower($document->OwnerFirstName)])
+            ->whereRaw('LOWER(LastNameIndoc) = ?', [strtolower($document->OwnerLastName)])
             ->get();
+
 
         foreach ($declarations as $declaration) {
             $user = $declaration->user; // Récupérer l'utilisateur qui a fait la déclaration
@@ -138,31 +140,34 @@ class DocumentController extends Controller
     //     ], 403); // Code 403 Forbidden
     // }
 
-    public function destroy(Document $document)
-{
-    // Vérifier si l'utilisateur est authentifié
-    if (Auth::check()) {
-        // Vérifier si l’utilisateur authentifié est le propriétaire du document ou un administrateur
-        if (Auth::user()->role === 'Admin' || Auth::id() === $document->user_id) {
-            $document->delete();
+    public function destroy($id)
+    {
+        $user = Auth::user();
 
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous devez être authentifié pour effectuer cette action.'
+            ], 401); // Code 401 Unauthorized
+        }
+
+        $document = Document::findOrFail($id);
+
+        // Si l'utilisateur est un simple utilisateur, vérifier qu'il est propriétaire de la déclaration
+        if ($user->hasRole('Admin') || $document->user_id === $user->id) {
+            $document->delete();
             return response()->json([
                 'success' => true,
-                'message' => 'Document supprimé avec succès.'
+                'message' => 'Publications supprimée avec succès.'
             ]);
         }
 
         return response()->json([
             'success' => false,
-            'message' => 'Vous n\'êtes pas autorisé à supprimer ce document.'
-        ], 403); // Code 403 Forbidden
+            'message' => 'Accès refusé. Vous ne pouvez supprimer que vos propres publications.'
+        ], 403);
     }
 
-    return response()->json([
-        'success' => false,
-        'message' => 'Utilisateur non authentifié.'
-    ], 401); // Code 401 Unauthorized
-}
 
     /**
      * Gérer la demande de restitution.

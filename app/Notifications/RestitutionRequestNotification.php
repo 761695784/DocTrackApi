@@ -1,11 +1,13 @@
 <?php
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Notification;
 use App\Models\User;
 use App\Models\Document;
+use App\Models\EmailLog; // Assurez-vous d'importer le modèle EmailLog
+use Illuminate\Bus\Queueable;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Notifications\Notification;
+use Illuminate\Notifications\Messages\MailMessage;
 
 class RestitutionRequestNotification extends Notification
 {
@@ -27,19 +29,33 @@ class RestitutionRequestNotification extends Notification
 
     public function toMail($notifiable)
     {
-        return (new MailMessage)
-        ->subject('Demande de restitution du document')
-        ->greeting('Bonjour ' . $notifiable->FirstName . ',')
-        ->line('Nous vous informons qu\'un utilisateur a formulé une demande de restitution pour le document que vous avez publié.')
-        ->line('Informations sur l\'utilisateur ayant fait la demande :')
-        ->line('Nom : ' . $this->fromUser->FirstName . ' ' . $this->fromUser->LastName)
-        ->line('Email : ' . $this->fromUser->email)
-        ->line('Téléphone : ' . $this->fromUser->Phone)
-        ->line('Pour plus de détails, veuillez cliquer sur le bouton ci-dessous :')
-        ->action('Voir le document', url('/documents/' . $this->document->id))
-        ->line('Nous vous remercions de votre confiance et de votre utilisation de notre plateforme.')
-        ->line('Cordialement,')
-        ->line('L’équipe de Sénégal DockTrack');
+        // Crée le mail
+        $mailMessage = (new MailMessage)
+            ->subject('Demande de restitution du document')
+            ->greeting('Bonjour ' . $notifiable->FirstName . ',')
+            ->line('Nous vous informons qu\'un utilisateur a formulé une demande de restitution pour le document que vous avez publié.')
+            ->line('Informations sur l\'utilisateur ayant fait la demande :')
+            ->line('Prénom et Nom :' . $this->fromUser->FirstName . ' ' . $this->fromUser->LastName)
+            ->line('Email : ' . $this->fromUser->email)
+            ->line('Téléphone : ' . $this->fromUser->Phone)
+            ->line('Pour plus de détails, veuillez cliquer sur le bouton ci-dessous :')
+            ->action('Voir le document', url('/documents/' . $this->document->id))
+            ->line('Nous vous remercions de votre confiance se manifestant par l\'utilisation de notre plateforme.')
+            ->line('Cordialement,')
+            ->line('L’équipe de Sénégal DockTrack');
 
+        // Enregistre le log de l'email dans la base de données
+        EmailLog::create([
+            'from' => config('mail.from.address'),
+            'to' => $notifiable->email,
+            'subject' => $mailMessage->subject,
+            'body' => implode("\n", $mailMessage->introLines), // Combine les lignes du message pour le corps
+        ]);
+
+        // Debugging: Confirme que l'insertion a été réalisée
+        Log::info('Email log inséré avec succès pour ' . $notifiable->email);
+
+        // Retourne l'instance MailMessage pour l'envoi
+        return $mailMessage;
     }
 }
