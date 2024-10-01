@@ -92,5 +92,12 @@ public function getAllData()
 }
 
 
+public function getRestitutionRequestCount()
+{
+    // Compte le nombre d'enregistrements dans la table des logs d'emails liés à une restitution
+    $count = EmailLog::where('subject', 'LIKE', '%Demande de restitution du document%')->count();
+
+    return response()->json(['count' => $count]);
+}
 
 }
