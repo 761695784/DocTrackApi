@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Document;
 use App\Models\EmailLog;
 use App\Models\Notification;
+use App\Models\DeclarationDePerte;
 use App\Http\Requests\StoreNotificationRequest;
 use App\Http\Requests\UpdateNotificationRequest;
 
@@ -72,6 +74,23 @@ public function showAllRestitutionEmails()
         })
     ], 200);
 }
+
+// API Controller in Laravel (Example)
+public function getAllData()
+{
+    $declarations = DeclarationDePerte::all();
+    $publications = Document::all();
+    // $restitutions = Restitution::all();
+    $emailsSent = EmailLog::all();
+
+    return response()->json([
+        'declarations' => $declarations,
+        'publications' => $publications,
+        // 'restitutions' => $restitutions,
+        'emailsSent' => $emailsSent,
+    ]);
+}
+
 
 
 }
