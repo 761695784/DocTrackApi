@@ -26,8 +26,8 @@ namespace App\Http\Controllers\Annotations ;
  *
 
  * @OA\POST(
- *     path="/api/register",
- *     summary="Register Simple User",
+ *     path="/api/login",
+ *     summary="Admin Login ",
  *     description="",
  *         security={
  *    {       "BearerAuth": {}}
@@ -45,24 +45,19 @@ namespace App\Http\Controllers\Annotations ;
  *             @OA\Schema(
  *                 type="object",
  *                 properties={
- *                     @OA\Property(property="FirstName", type="string"),
- *                     @OA\Property(property="LastName", type="string"),
- *                     @OA\Property(property="Adress", type="string"),
- *                     @OA\Property(property="Phone", type="string"),
  *                     @OA\Property(property="email", type="string"),
  *                     @OA\Property(property="password", type="string"),
- *                     @OA\Property(property="password_confirmation", type="string"),
  *                 },
  *             ),
  *         ),
  *     ),
- *     tags={"Authentification"},
+ *     tags={"Mails "},
 *),
 
 
- * @OA\PUT(
- *     path="/api/change-password",
- *     summary="Changing Password",
+ * @OA\GET(
+ *     path="/api/correspondence",
+ *     summary="mail de correspondance",
  *     description="",
  *         security={
  *    {       "BearerAuth": {}}
@@ -75,24 +70,21 @@ namespace App\Http\Controllers\Annotations ;
  *     @OA\RequestBody(
  *         required=true,
  *         @OA\MediaType(
- *             mediaType="application/x-www-form-urlencoded",
+ *             mediaType="multipart/form-data",
  *             @OA\Schema(
  *                 type="object",
  *                 properties={
- *                     @OA\Property(property="current_password", type="string"),
- *                     @OA\Property(property="new_password", type="string"),
- *                     @OA\Property(property="new_password_confirmation", type="string"),
  *                 },
  *             ),
  *         ),
  *     ),
- *     tags={"Authentification"},
+ *     tags={"Mails "},
 *),
 
 
- * @OA\PUT(
- *     path="/api/profil",
- *     summary="Changing Profil info",
+ * @OA\GET(
+ *     path="/api/restitution",
+ *     summary="mail de demande de restitution",
  *     description="",
  *         security={
  *    {       "BearerAuth": {}}
@@ -102,23 +94,26 @@ namespace App\Http\Controllers\Annotations ;
  * @OA\Response(response="500", description="Internal Server Error"),
  *     @OA\Parameter(in="header", name="User-Agent", required=false, @OA\Schema(type="string")
  * ),
- *     @OA\RequestBody(
- *         required=true,
- *         @OA\MediaType(
- *             mediaType="application/x-www-form-urlencoded",
- *             @OA\Schema(
- *                 type="object",
- *                 properties={
- *                     @OA\Property(property="FirstName", type="string"),
- *                     @OA\Property(property="LastName", type="string"),
- *                 },
- *             ),
- *         ),
- *     ),
- *     tags={"Authentification"},
+ *     tags={"Mails "},
+*),
+
+
+ * @OA\GET(
+ *     path="/api/emails",
+ *     summary="Ensemble des mails envoyés",
+ *     description="",
+ *         security={
+ *    {       "BearerAuth": {}}
+ *         },
+ * @OA\Response(response="200", description="OK"),
+ * @OA\Response(response="404", description="Not Found"),
+ * @OA\Response(response="500", description="Internal Server Error"),
+ *     @OA\Parameter(in="header", name="User-Agent", required=false, @OA\Schema(type="string")
+ * ),
+ *     tags={"Mails "},
 *),
 
 
 */
 
- class AuthentificationAnnotationController {}
+ class MailsAnnotationController {}

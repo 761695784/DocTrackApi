@@ -26,8 +26,8 @@ namespace App\Http\Controllers\Annotations ;
  *
 
  * @OA\GET(
- *     path="/api/comments",
- *     summary="Reading all commentaire",
+ *     path="/api/logout",
+ *     summary="logout SimpleUser",
  *     description="",
  *         security={
  *    {       "BearerAuth": {}}
@@ -37,13 +37,13 @@ namespace App\Http\Controllers\Annotations ;
  * @OA\Response(response="500", description="Internal Server Error"),
  *     @OA\Parameter(in="header", name="User-Agent", required=false, @OA\Schema(type="string")
  * ),
- *     tags={"Comment a publication"},
+ *     tags={"Restitution de document"},
 *),
 
 
  * @OA\POST(
- *     path="/api/comments",
- *     summary="Create comment",
+ *     path="/api/documents/{id}/restitution",
+ *     summary="demande de restitution",
  *     description="",
  *         security={
  *    {       "BearerAuth": {}}
@@ -61,33 +61,18 @@ namespace App\Http\Controllers\Annotations ;
  *             @OA\Schema(
  *                 type="object",
  *                 properties={
- *                     @OA\Property(property="contenu", type="string"),
- *                     @OA\Property(property="document_id", type="string"),
- *                     @OA\Property(property="", type="string"),
+ *                     @OA\Property(property="Title", type="string"),
+ *                     @OA\Property(property="LastNameInDoc", type="string"),
+ *                     @OA\Property(property="document_type_id", type="string"),
+ *                     @OA\Property(property="FirstNameInDoc", type="string"),
  *                 },
  *             ),
  *         ),
  *     ),
- *     tags={"Comment a publication"},
-*),
-
-
- * @OA\GET(
- *     path="/api/documents/31/comments",
- *     summary="Reading a specific commentaire",
- *     description="",
- *         security={
- *    {       "BearerAuth": {}}
- *         },
- * @OA\Response(response="200", description="OK"),
- * @OA\Response(response="404", description="Not Found"),
- * @OA\Response(response="500", description="Internal Server Error"),
- *     @OA\Parameter(in="header", name="User-Agent", required=false, @OA\Schema(type="string")
- * ),
- *     tags={"Comment a publication"},
+ *     tags={"Restitution de document"},
 *),
 
 
 */
 
- class CommentapublicationAnnotationController {}
+ class RestitutiondedocumentAnnotationController {}

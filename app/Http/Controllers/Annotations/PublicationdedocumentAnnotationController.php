@@ -58,6 +58,55 @@ namespace App\Http\Controllers\Annotations ;
 *),
 
 
+ * @OA\GET(
+ *     path="/api/mypub",
+ *     summary="Reading my owns  publication",
+ *     description="",
+ *         security={
+ *    {       "BearerAuth": {}}
+ *         },
+ * @OA\Response(response="200", description="OK"),
+ * @OA\Response(response="404", description="Not Found"),
+ * @OA\Response(response="500", description="Internal Server Error"),
+ *     @OA\Parameter(in="header", name="User-Agent", required=false, @OA\Schema(type="string")
+ * ),
+ *     tags={"Publication de document"},
+*),
+
+
+ * @OA\GET(
+ *     path="/api/documents/32",
+ *     summary="Reading a specific  publication",
+ *     description="",
+ *         security={
+ *    {       "BearerAuth": {}}
+ *         },
+ * @OA\Response(response="200", description="OK"),
+ * @OA\Response(response="404", description="Not Found"),
+ * @OA\Response(response="500", description="Internal Server Error"),
+ *     @OA\Parameter(in="header", name="User-Agent", required=false, @OA\Schema(type="string")
+ * ),
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\MediaType(
+ *             mediaType="multipart/form-data",
+ *             @OA\Schema(
+ *                 type="object",
+ *                 properties={
+ *                     @OA\Property(property="image", type="string"),
+ *                     @OA\Property(property="OwnerFirstName", type="string"),
+ *                     @OA\Property(property="OwnerLastName", type="string"),
+ *                     @OA\Property(property="Location", type="string"),
+ *                     @OA\Property(property="statut", type="string"),
+ *                     @OA\Property(property="document_type_id", type="integer"),
+ *                 },
+ *             ),
+ *         ),
+ *     ),
+ *     tags={"Publication de document"},
+*),
+
+
  * @OA\POST(
  *     path="/api/documents",
  *     summary="Create a publication",
@@ -93,8 +142,8 @@ namespace App\Http\Controllers\Annotations ;
 
 
  * @OA\PUT(
- *     path="/api/documents/6",
- *     summary="Update a publication",
+ *     path="/api/document/34",
+ *     summary="Update only my publication",
  *     description="",
  *         security={
  *    {       "BearerAuth": {}}
@@ -111,12 +160,7 @@ namespace App\Http\Controllers\Annotations ;
  *             @OA\Schema(
  *                 type="object",
  *                 properties={
- *                     @OA\Property(property="Location", type="string"),
- *                     @OA\Property(property="image", type="string", format="binary"),
- *                     @OA\Property(property="document_type_id", type="string"),
  *                     @OA\Property(property="statut", type="string"),
- *                     @OA\Property(property="OwnerFirstName", type="string"),
- *                     @OA\Property(property="OwnerLastName", type="string"),
  *                 },
  *             ),
  *         ),
@@ -126,8 +170,8 @@ namespace App\Http\Controllers\Annotations ;
 
 
  * @OA\DELETE(
- *     path="/api/documents/5",
- *     summary="delete a publication by Admin",
+ *     path="/api/document/45",
+ *     summary="delete a publication ",
  *     description="",
  *         security={
  *    {       "BearerAuth": {}}
