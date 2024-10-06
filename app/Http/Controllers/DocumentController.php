@@ -118,7 +118,7 @@ class DocumentController extends Controller
             'document' => $document // Retourner le document mis à jour
         ]);
     }
-    
+
 
     public function destroy($id)
     {

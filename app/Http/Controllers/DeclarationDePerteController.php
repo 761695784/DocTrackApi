@@ -58,38 +58,39 @@ class DeclarationDePerteController extends Controller
     }
 
 
-  private function sendNotificationEmail($user, $document)
-{
-    $Phone = $document->user->Phone;
-    $documentUrl = route('documents.show', $document->id);
+    private function sendNotificationEmail($user, $document)
+    {
+        $Phone = $document->user->Phone; // Obtenez le numéro de téléphone
+        // Remplacez 'https://votresite.com' par l'URL de votre application frontend
+        $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id; // Créez une URL complète pour le frontend
 
-    try {
-        Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
+        try {
+            Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
 
-        // Ajout des logs pour vérifier les données
-        Log::info('Tentative d\'enregistrement de l\'email log : ', [
-            'from' => config('mail.from.address'),
-            'to' => $user->email,
-            'subject' => 'Correspondance à votre déclaration de perte',
-            'body' => 'Le document publié correspondant aux informations : ' .
-                      $document->OwnerFirstName . ' ' . $document->OwnerLastName .
-                      ' avec le téléphone : ' . $Phone,
-        ]);
+            // Ajout des logs pour vérifier les données
+            Log::info('Tentative d\'enregistrement de l\'email log : ', [
+                'from' => config('mail.from.address'),
+                'to' => $user->email,
+                'subject' => 'Correspondance à votre déclaration de perte',
+                'body' => 'Le document publié correspondant aux informations : ' .
+                          $document->OwnerFirstName . ' ' . $document->OwnerLastName .
+                          ' avec le téléphone : ' . $Phone,
+            ]);
 
-        \App\Models\EmailLog::create([
-            'from' => config('mail.from.address'),
-            'to' => $user->email,
-            'subject' => 'Correspondance à votre déclaration de perte',
-            'body' => 'Le document publié correspondant aux informations : ' .
-                      $document->OwnerFirstName . ' ' . $document->OwnerLastName .
-                      ' avec le téléphone : ' . $Phone,
-        ]);
+            \App\Models\EmailLog::create([
+                'from' => config('mail.from.address'),
+                'to' => $user->email,
+                'subject' => 'Correspondance à votre déclaration de perte',
+                'body' => 'Le document publié correspondant aux informations : ' .
+                          $document->OwnerFirstName . ' ' . $document->OwnerLastName .
+                          ' avec le téléphone : ' . $Phone,
+            ]);
 
-        Log::info('Email log enregistré avec succès.');
-    } catch (\Exception $e) {
-        Log::error('Erreur lors de l\'enregistrement de l\'email log : ' . $e->getMessage());
+            Log::info('Email log enregistré avec succès.');
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de l\'enregistrement de l\'email log : ' . $e->getMessage());
+        }
     }
-}
 
      /**
      * Afficher toutes les déclarations de perte (uniquement pour les admins).
