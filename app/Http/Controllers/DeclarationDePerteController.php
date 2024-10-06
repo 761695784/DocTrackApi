@@ -61,7 +61,9 @@ class DeclarationDePerteController extends Controller
   private function sendNotificationEmail($user, $document)
 {
     $Phone = $document->user->Phone;
-    $documentUrl = route('documents.show', $document->id);
+    // $documentUrl = route('documents.show', $document->id);
+    $documentUrl = route('https://sendoctrack.netlify.app/document/', $document->id);
+
 
     try {
         Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));

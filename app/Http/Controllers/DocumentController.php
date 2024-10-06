@@ -66,7 +66,7 @@ class DocumentController extends Controller
         foreach ($declarations as $declaration) {
             $user = $declaration->user; // Récupérer l'utilisateur qui a fait la déclaration
             $Phone = $document->user->Phone; // Récupérer le numéro de téléphone du propriétaire du document
-            $documentUrl = route('documents.show', $document->id); // Générer l'URL pour afficher le document
+            $documentUrl = route('https://sendoctrack.netlify.app/document/', $document->id); // Générer l'URL pour afficher le document
 
             // Envoi de la notification par email
             Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
@@ -118,7 +118,7 @@ class DocumentController extends Controller
             'document' => $document // Retourner le document mis à jour
         ]);
     }
-    
+
 
     public function destroy($id)
     {
