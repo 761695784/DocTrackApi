@@ -35,7 +35,7 @@ CMD php artisan vendor:publish --provider="PHPOpenSourceSaver\JWTAuth\Providers\
     php artisan db:seed --class=RolesAndPermissionsSeeder && \
     php artisan db:seed --class=UserSeeder && \
     php artisan db:seed --class=DocumentTypeSeeder && \
-    php artisan jwt:secret --force && \  
+    php artisan jwt:secret --force && \
     php artisan serve --host=0.0.0.0 --port=8181
 
-EXPOSE 8081
+EXPOSE 8181

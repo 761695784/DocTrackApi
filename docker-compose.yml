@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8181:8181"
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_DATABASE: DocTrack
+      DB_USERNAME: root
+      DB_PASSWORD: majeli@2023
+    depends_on:
+      - db
+
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_DATABASE: DocTrack
+      MYSQL_ROOT_PASSWORD: majeli@2023
+    ports:
+      - "3308:3306"
