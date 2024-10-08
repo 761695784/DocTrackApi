@@ -44,12 +44,16 @@ class RestitutionRequestNotification extends Notification
             ->line('Cordialement,')
             ->line('L’équipe de Sénégal DockTrack');
 
-        // Enregistre le log de l'email dans la base de données
+        // Enregistre le log de l'email dans la base de données avec les nouvelles colonnes
         EmailLog::create([
             'from' => config('mail.from.address'),
             'to' => $notifiable->email,
             'subject' => $mailMessage->subject,
             'body' => implode("\n", $mailMessage->introLines), // Combine les lignes du message pour le corps
+            'publisher_user_id' => $notifiable->id, // Publicateur du document
+            'requester_user_id' => $this->fromUser->id, // Demandeur de restitution
+            'document_id' => $this->document->id, // ID du document
+            'declarant_user_id' => null, // Dans ce cas, il n'y a pas de déclaration de perte
         ]);
 
         // Debugging: Confirme que l'insertion a été réalisée
@@ -58,4 +62,5 @@ class RestitutionRequestNotification extends Notification
         // Retourne l'instance MailMessage pour l'envoi
         return $mailMessage;
     }
+
 }

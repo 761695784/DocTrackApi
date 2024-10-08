@@ -57,40 +57,43 @@ class DeclarationDePerteController extends Controller
         ], 201);
     }
 
-
     private function sendNotificationEmail($user, $document)
     {
-        $Phone = $document->user->Phone; // Obtenez le numéro de téléphone
-        // Remplacez 'https://votresite.com' par l'URL de votre application frontend
-        $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id; // Créez une URL complète pour le frontend
+        $Phone = $document->user->Phone;
+        $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id;
 
         try {
+            // Envoi de l'email
             Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
 
-            // Ajout des logs pour vérifier les données
-            Log::info('Tentative d\'enregistrement de l\'email log : ', [
+            // Log d'email avec information du publisher et du requester
+            $emailLog = \App\Models\EmailLog::create([
                 'from' => config('mail.from.address'),
                 'to' => $user->email,
                 'subject' => 'Correspondance à votre déclaration de perte',
                 'body' => 'Le document publié correspondant aux informations : ' .
                           $document->OwnerFirstName . ' ' . $document->OwnerLastName .
                           ' avec le téléphone : ' . $Phone,
+                'publisher_user_id' => $document->user->id,
+                'requester_user_id' => $user->id,
+                'document_id' => $document->id, // Assurez-vous que ce document existe
+                'declarant_user_id' => $user->id,
             ]);
 
-            \App\Models\EmailLog::create([
-                'from' => config('mail.from.address'),
-                'to' => $user->email,
-                'subject' => 'Correspondance à votre déclaration de perte',
-                'body' => 'Le document publié correspondant aux informations : ' .
-                          $document->OwnerFirstName . ' ' . $document->OwnerLastName .
-                          ' avec le téléphone : ' . $Phone,
+            Log::info('Email log enregistré avec succès pour l\'utilisateur ' . $user->email, [
+                'email_log' => $emailLog
             ]);
-
-            Log::info('Email log enregistré avec succès.');
         } catch (\Exception $e) {
-            Log::error('Erreur lors de l\'enregistrement de l\'email log : ' . $e->getMessage());
+            Log::error('Erreur lors de l\'enregistrement de l\'email log : ' . $e->getMessage(), [
+                'publisher_user_id' => $document->user->id,
+                'requester_user_id' => $user->id,
+                'document_id' => $document->id,
+                'declarant_user_id' => $user->id,
+            ]);
         }
     }
+
+
 
      /**
      * Afficher toutes les déclarations de perte (uniquement pour les admins).

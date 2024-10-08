@@ -17,7 +17,7 @@ class DocumentPublishedNotification extends Mailable
     public function __construct($document, $Phone, $documentUrl)
     {
         $this->document = $document;
-        $this->Phone = $Phone;        // Certains paramètres changés pour la cohérence
+        $this->Phone = $Phone; // Certains paramètres changés pour la cohérence
         $this->documentUrl = $documentUrl; // Initialisez la propriété
     }
 
@@ -33,5 +33,4 @@ class DocumentPublishedNotification extends Mailable
                         'documentUrl' => $frontendUrl, // Utilisez l'URL du frontend
                     ]);
     }
-
 }

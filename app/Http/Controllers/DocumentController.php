@@ -29,56 +29,56 @@ class DocumentController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreDocumentRequest $request)
-    {
-        // Valider la demande et récupérer le fichier image
-        $validatedData = $request->validated();
-        $document = new Document();
-        $document->fill([
-            'OwnerFirstName' => $validatedData['OwnerFirstName'],
-            'OwnerLastName' => $validatedData['OwnerLastName'],
-            'Location' => $validatedData['Location'],
-            'statut' => 'non récupéré', // Valeur par défaut
-            'document_type_id' => $validatedData['document_type_id'],
-            'user_id' => Auth::id(),
-        ]);
+        public function store(StoreDocumentRequest $request)
+        {
+            // Valider la demande et récupérer le fichier image
+            $validatedData = $request->validated();
+            $document = new Document();
+            $document->fill([
+                'OwnerFirstName' => $validatedData['OwnerFirstName'],
+                'OwnerLastName' => $validatedData['OwnerLastName'],
+                'Location' => $validatedData['Location'],
+                'statut' => 'non récupéré', // Valeur par défaut
+                'document_type_id' => $validatedData['document_type_id'],
+                'user_id' => Auth::id(),
+            ]);
 
-        // Vérifie si un fichier image a été téléversé et est valide
-        if ($request->hasFile('image') && $request->file('image')->isValid()) {
-            // Enregistre l'image dans le dossier 'documents' du système de fichiers public
-            $path = $request->file('image')->store('documents', 'public');
-            // Génère l'URL accessible publiquement pour l'image
-            $document->image = Storage::url($path);
-        } else {
-            // Optionnel : enregistrer une erreur ou gérer le cas où aucun fichier valide n'est fourni
-            return response()->json(['error' => 'Aucun fichier image valide fourni'], 400);
+            // Vérifie si un fichier image a été téléversé et est valide
+            if ($request->hasFile('image') && $request->file('image')->isValid()) {
+                // Enregistre l'image dans le dossier 'documents' du système de fichiers public
+                $path = $request->file('image')->store('documents', 'public');
+                // Génère l'URL accessible publiquement pour l'image
+                $document->image = Storage::url($path);
+            } else {
+                // Optionnel : enregistrer une erreur ou gérer le cas où aucun fichier valide n'est fourni
+                return response()->json(['error' => 'Aucun fichier image valide fourni'], 400);
+            }
+
+            // Enregistre la ressource dans la base de données
+            $document->save();
+
+            // Recherche des déclarations de perte correspondantes (insensible à la casse)
+            $declarations = DeclarationDePerte::whereRaw('LOWER(FirstNameIndoc) = ?', [strtolower($document->OwnerFirstName)])
+                ->whereRaw('LOWER(LastNameIndoc) = ?', [strtolower($document->OwnerLastName)])
+                ->get();
+
+
+            foreach ($declarations as $declaration) {
+                $user = $declaration->user; // Récupérer l'utilisateur qui a fait la déclaration
+                $Phone = $document->user->Phone; // Récupérer le numéro de téléphone du propriétaire du document
+                $documentUrl = route('documents.show', $document->id); // Générer l'URL pour afficher le document
+
+                // Envoi de la notification par email
+                Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
+            }
+
+            // Répondre avec le document créé
+            return response()->json([
+                'success' => true,
+                'message' => 'Document créé avec succès.',
+                'document' => $document
+            ], 201);
         }
-
-        // Enregistre la ressource dans la base de données
-        $document->save();
-
-        // Recherche des déclarations de perte correspondantes (insensible à la casse)
-        $declarations = DeclarationDePerte::whereRaw('LOWER(FirstNameIndoc) = ?', [strtolower($document->OwnerFirstName)])
-            ->whereRaw('LOWER(LastNameIndoc) = ?', [strtolower($document->OwnerLastName)])
-            ->get();
-
-
-        foreach ($declarations as $declaration) {
-            $user = $declaration->user; // Récupérer l'utilisateur qui a fait la déclaration
-            $Phone = $document->user->Phone; // Récupérer le numéro de téléphone du propriétaire du document
-            $documentUrl = route('documents.show', $document->id); // Générer l'URL pour afficher le document
-
-            // Envoi de la notification par email
-            Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
-        }
-
-        // Répondre avec le document créé
-        return response()->json([
-            'success' => true,
-            'message' => 'Document créé avec succès.',
-            'document' => $document
-        ], 201);
-    }
 
 
             /**
