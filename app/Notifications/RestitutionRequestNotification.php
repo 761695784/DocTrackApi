@@ -31,7 +31,7 @@ class RestitutionRequestNotification extends Notification
     {
         // Crée le mail
         $mailMessage = (new MailMessage)
-            ->subject('Demande de restitution du document')
+            ->subject('Demande de restitution')
             ->greeting('Bonjour ' . $notifiable->FirstName . ',')
             ->line('Nous vous informons qu\'un utilisateur a formulé une demande de restitution pour le document que vous avez publié.')
             ->line('Informations sur l\'utilisateur ayant fait la demande :')
