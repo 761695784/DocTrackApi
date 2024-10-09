@@ -14,7 +14,6 @@ use App\Http\Requests\StoreDeclarationDePerteRequest;
 class DeclarationDePerteController extends Controller
 {
     use HasRoles;
-    // Autres méthodes...
     public function store(StoreDeclarationDePerteRequest $request)
     {
         $user = Auth::user();
@@ -34,7 +33,7 @@ class DeclarationDePerteController extends Controller
             'LastNameInDoc' => $validatedData['LastNameInDoc'],
             'DocIdentification' => $validatedData['DocIdentification'] ?? null,
             'document_type_id' => $validatedData['document_type_id'],
-            'user_id' => $user->id, // Associez l'utilisateur authentifié
+            'user_id' => $user->id,
         ]);
 
         $matchingDocuments = Document::where('document_type_id', $validatedData['document_type_id'])
@@ -76,7 +75,7 @@ class DeclarationDePerteController extends Controller
                           ' avec le téléphone : ' . $Phone,
                 'publisher_user_id' => $document->user->id,
                 'requester_user_id' => $user->id,
-                'document_id' => $document->id, // Assurez-vous que ce document existe
+                'document_id' => $document->id,
                 'declarant_user_id' => $user->id,
             ]);
 

@@ -12,13 +12,13 @@ class DocumentPublishedNotification extends Mailable
 
     public $document;
     public $Phone;
-    public $documentUrl;  // Ajout de cette propriété
+    public $documentUrl;
 
     public function __construct($document, $Phone, $documentUrl)
     {
         $this->document = $document;
-        $this->Phone = $Phone; // Certains paramètres changés pour la cohérence
-        $this->documentUrl = $documentUrl; // Initialisez la propriété
+        $this->Phone = $Phone;
+        $this->documentUrl = $documentUrl;
     }
 
     public function build()
@@ -30,7 +30,7 @@ class DocumentPublishedNotification extends Mailable
                     ->markdown('emails.document.published', [
                         'document' => $this->document,
                         'Phone' => $this->Phone,
-                        'documentUrl' => $frontendUrl, // Utilisez l'URL du frontend
+                        'documentUrl' => $frontendUrl, 
                     ]);
     }
 }
