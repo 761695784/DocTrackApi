@@ -160,6 +160,15 @@ class DocumentController extends Controller
         // L'utilisateur connecté qui clique sur "Restituer"
         $fromUser = Auth::user();
 
+
+        // Vérifier si l'utilisateur connecté est le propriétaire du document
+        if ($fromUser->id === $document->user_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous ne pouvez pas demander la restitution de votre propre document.'
+            ], 403); // Code 403 Forbidden
+        }
+
         // L'utilisateur qui a publié le document
         $toUser = $document->user;
 
