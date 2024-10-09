@@ -16,29 +16,36 @@ class NotificationController extends Controller
      */
 
      public function showAllEmails()
-{
-    // Récupérer tous les logs d'emails
-    $emailLogs = EmailLog::all();
+     {
+         // Récupérer tous les logs d'emails
+         $emailLogs = EmailLog::with(['document', 'requester', 'publisher', 'declarant'])->get();
 
-    return response()->json([
-        'success' => true,
-        'data' => $emailLogs->map(function($emailLog) {
-            return [
-                'id' => $emailLog->id,
-                'from' => $emailLog->from,
-                'to' => $emailLog->to,
-                'subject' => $emailLog->subject,
-                'body' => $emailLog->body,
-                'created_at' => $emailLog->created_at,
-            ];
-        })
-    ], 200);
-}
+         return response()->json([
+             'success' => true,
+             'data' => $emailLogs->map(function($emailLog) {
+                 return [
+                     'id' => $emailLog->id,
+                     'from' => $emailLog->from,
+                     'to' => $emailLog->to,
+                     'subject' => $emailLog->subject,
+                     'body' => $emailLog->body,
+                     'document_id' => $emailLog->document->id ?? null,
+                     'requester_user_id' => $emailLog->requester->id ?? null,
+                     'publisher_user_id' => $emailLog->publisher->id ?? null,
+                     'declarant_user_id' => $emailLog->declarant->id ?? null,
+                     'created_at' => $emailLog->created_at,
+                 ];
+             })
+         ], 200);
+     }
+
 
 public function showAllCorrespondenceEmails()
 {
     // Récupérer tous les logs d'emails de correspondance
-    $correspondenceEmails = EmailLog::where('subject', 'like', 'Correspondance%')->get();
+    $correspondenceEmails = EmailLog::with(['document', 'requester', 'publisher', 'declarant'])
+                                    ->where('subject', 'like', 'Correspondance%')
+                                    ->get();
 
     return response()->json([
         'success' => true,
@@ -49,6 +56,10 @@ public function showAllCorrespondenceEmails()
                 'to' => $emailLog->to,
                 'subject' => $emailLog->subject,
                 'body' => $emailLog->body,
+                'document_id' => $emailLog->document->id ?? null,
+                'requester_user_id' => $emailLog->requester->id ?? null,
+                'publisher_user_id' => $emailLog->publisher->id ?? null,
+                'declarant_user_id' => $emailLog->declarant->id ?? null,
                 'created_at' => $emailLog->created_at,
             ];
         })
@@ -58,7 +69,9 @@ public function showAllCorrespondenceEmails()
 public function showAllRestitutionEmails()
 {
     // Récupérer tous les logs d'emails de demande de restitution
-    $restitutionEmails = EmailLog::where('subject', 'like', 'Demande de restitution%')->get();
+    $restitutionEmails = EmailLog::with(['document', 'requester', 'publisher', 'declarant'])
+                                 ->where('subject', 'like', 'Demande de restitution%')
+                                 ->get();
 
     return response()->json([
         'success' => true,
@@ -69,6 +82,10 @@ public function showAllRestitutionEmails()
                 'to' => $emailLog->to,
                 'subject' => $emailLog->subject,
                 'body' => $emailLog->body,
+                'document_id' => $emailLog->document->id ?? null,
+                'requester_user_id' => $emailLog->requester->id ?? null,
+                'publisher_user_id' => $emailLog->publisher->id ?? null,
+                'declarant_user_id' => $emailLog->declarant->id ?? null,
                 'created_at' => $emailLog->created_at,
             ];
         })
@@ -80,14 +97,25 @@ public function getAllData()
 {
     $declarations = DeclarationDePerte::all();
     $publications = Document::all();
-    // $restitutions = Restitution::all();
-    $emailsSent = EmailLog::all();
+    $emailsSent = EmailLog::with(['document', 'requester', 'publisher', 'declarant'])->get();
 
     return response()->json([
         'declarations' => $declarations,
         'publications' => $publications,
-        // 'restitutions' => $restitutions,
-        'emailsSent' => $emailsSent,
+        'emailsSent' => $emailsSent->map(function($emailLog) {
+            return [
+                'id' => $emailLog->id,
+                'from' => $emailLog->from,
+                'to' => $emailLog->to,
+                'subject' => $emailLog->subject,
+                'body' => $emailLog->body,
+                'document_id' => $emailLog->document->id ?? null,
+                'requester_user_id' => $emailLog->requester->id ?? null,
+                'publisher_user_id' => $emailLog->publisher->id ?? null,
+                'declarant_user_id' => $emailLog->declarant->id ?? null,
+                'created_at' => $emailLog->created_at,
+            ];
+        }),
     ]);
 }
 
