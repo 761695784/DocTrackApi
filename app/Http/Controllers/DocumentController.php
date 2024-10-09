@@ -2,17 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Document;
-use Spatie\Permission\Traits\HasRoles;
+use App\Models\EmailLog;
+use Illuminate\Http\Request;
 use App\Models\DeclarationDePerte;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\StoreDocumentRequest;
 use App\Mail\DocumentPublishedNotification;
 use App\Http\Requests\UpdateDocumentRequest;
 use App\Notifications\RestitutionRequestNotification;
+
 class DocumentController extends Controller
 {
     /**
@@ -160,13 +162,25 @@ class DocumentController extends Controller
         // L'utilisateur connecté qui clique sur "Restituer"
         $fromUser = Auth::user();
 
-
         // Vérifier si l'utilisateur connecté est le propriétaire du document
         if ($fromUser->id === $document->user_id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Vous ne pouvez pas demander la restitution de votre propre document.'
             ], 403); // Code 403 Forbidden
+        }
+
+        // Vérifier si une demande de restitution pour ce document a déjà été faite par cet utilisateur
+        $existingEmailLog = EmailLog::where('requester_user_id', $fromUser->id)
+            ->where('document_id', $documentId)
+            ->whereNotNull('publisher_user_id') // S'assurer qu'il s'agit bien d'une demande de restitution
+            ->first();
+
+        if ($existingEmailLog) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous avez déjà demandé la restitution de ce document.'
+            ], 400); // Code 400 Bad Request
         }
 
         // L'utilisateur qui a publié le document
