@@ -14,7 +14,6 @@ return new class extends Migration
             // Ajout des colonnes
             $table->foreignId('publisher_user_id')->nullable()->constrained('users')->onDelete('cascade');
             $table->foreignId('requester_user_id')->nullable()->constrained('users')->onDelete('cascade');
-            // $table->foreignId('document_id')->nullable()->constrained('documents')->onDelete('cascade');
             $table->foreignId('declarant_user_id')->nullable()->constrained('users')->onDelete('cascade');
         });
     }
@@ -31,9 +30,6 @@ return new class extends Migration
 
             $table->dropForeign(['requester_user_id']);
             $table->dropColumn('requester_user_id');
-
-            // $table->dropForeign(['document_id']);
-            // $table->dropColumn('document_id');
 
             $table->dropForeign(['declarant_user_id']);
             $table->dropColumn('declarant_user_id');
