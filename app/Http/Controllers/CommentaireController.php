@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreCommentaireRequest;
+use App\Models\Document;
 use App\Models\Commentaire;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use App\Http\Requests\StoreCommentaireRequest;
+use App\Mail\NewCommentNotification;
 
 class CommentaireController extends Controller
 {
@@ -42,6 +45,15 @@ class CommentaireController extends Controller
             'document_id' => $request->document_id,
         ]);
 
+        // Récupérer la publication associée
+        $document = Document::find($request->document_id);
+
+        // Récupérer l'auteur de la publication
+        $auteur = $document->user;
+
+        // Envoyer un email à l'auteur
+        Mail::to($auteur->email)->send(new NewCommentNotification($document, $commentaire, $auteur));
+
         // Retourner une réponse JSON avec le commentaire créé
         return response()->json([
             'success' => true,
@@ -49,7 +61,6 @@ class CommentaireController extends Controller
             'commentaire' => $commentaire
         ], 201);
     }
-
     /**
      * Display the specified resource.
      */
