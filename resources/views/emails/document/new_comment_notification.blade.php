@@ -3,7 +3,7 @@
 
 Bonjour **{{ $auteur->FirstName }}**,
 
-Votre avez reçu un nouveau commentaire dans votre publication du document perdu  :
+Votre avez reçu un nouveau commentaire dans votre publication du document perdu 
 
 {{-- @component('mail::panel')
 "{{ $commentaire->contenu }}"
