@@ -74,11 +74,11 @@ class DocumentController extends Controller
             Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
 
             // Émettre un événement de notification
-            event(new NewNotificationEvent([
-                'title' => 'Nouveau document',
-                'message' => "Le document de {$document->OwnerFirstName} {$document->OwnerLastName} a été créé.",
-                'type' => 'document'
-            ]));
+            // event(new NewNotificationEvent([
+            //     'title' => 'Nouveau document',
+            //     'message' => "Le document de {$document->OwnerFirstName} {$document->OwnerLastName} a été créé.",
+            //     'type' => 'document'
+            // ]));
         }
 
         // Répondre avec le document créé
