@@ -198,12 +198,12 @@ class DocumentController extends Controller
         // Retourner une réponse JSON
         return response()->json(['message' => 'Demande de restitution envoyée avec succès.']);
     }
-    public function sendNotification(Request $request)
-    {
-        $message = $request->input('message');
-        broadcast(new NewNotificationEvent($message));  // Diffusion de l'événement
-        return response()->json(['status' => 'Notification sent!']);
-    }
+    // public function sendNotification(Request $request)
+    // {
+    //     $message = $request->input('message');
+    //     broadcast(new NewNotificationEvent($message));  // Diffusion de l'événement
+    //     return response()->json(['status' => 'Notification sent!']);
+    // }
 
 
     public function OwnPub()
