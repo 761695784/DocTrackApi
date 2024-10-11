@@ -5,7 +5,6 @@ use App\Models\Document;
 use Illuminate\Http\Request;
 use App\Models\DeclarationDePerte;
 use Illuminate\Support\Facades\Log;
-use App\Events\NewNotificationEvent;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Spatie\Permission\Traits\HasRoles;
