@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use App\Models\Document;
 use App\Models\EmailLog;
 use App\Models\Notification;
+use Illuminate\Http\Request;
 use App\Models\DeclarationDePerte;
 use App\Http\Requests\StoreNotificationRequest;
 use App\Http\Requests\UpdateNotificationRequest;
@@ -126,6 +128,34 @@ public function getRestitutionRequestCount()
     $count = EmailLog::where('subject', 'LIKE', '%Demande de restitution du document%')->count();
 
     return response()->json(['count' => $count]);
+}
+
+
+
+public function getNewNotifications(Request $request)
+{
+    // Récupérer le paramètre lastChecked
+    $lastChecked = $request->query('lastChecked');
+
+    // Convertir en instance de Carbon pour s'assurer que c'est une date valide
+    try {
+        $lastCheckedDate = Carbon::parse($lastChecked);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => 'Invalid date format'
+        ], 400);
+    }
+
+    // Récupérer les nouvelles publications
+    $newDocuments = Document::where('created_at', '>', $lastCheckedDate)->get();
+
+    // Récupérer les nouvelles déclarations
+    $newDeclarations = DeclarationDePerte::where('created_at', '>', $lastCheckedDate)->get();
+
+    return response()->json([
+        'newDocuments' => $newDocuments,
+        'newDeclarations' => $newDeclarations,
+    ]);
 }
 
 }

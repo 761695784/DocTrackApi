@@ -5,6 +5,7 @@ use App\Models\Document;
 use Illuminate\Http\Request;
 use App\Models\DeclarationDePerte;
 use Illuminate\Support\Facades\Log;
+use App\Events\NewNotificationEvent;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Spatie\Permission\Traits\HasRoles;
@@ -44,6 +45,13 @@ class DeclarationDePerteController extends Controller
         foreach ($matchingDocuments as $document) {
             try {
                 $this->sendNotificationEmail($user, $document);
+
+                // Émettre un événement de notification
+                event(new NewNotificationEvent([
+                    'title' => 'Nouvelle déclaration de perte',
+                    'message' => "Une déclaration de perte a été faite pour le document de {$document->OwnerFirstName} {$document->OwnerLastName}.",
+                    'type' => 'declaration'
+                ]));
             } catch (\Exception $e) {
                 Log::error('Erreur lors de l\'envoi de la notification : ' . $e->getMessage());
             }

@@ -39,6 +39,7 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/restitution', [NotificationController::class, 'showAllRestitutionEmails']);
     Route::get('/emails', [NotificationController::class,'showAllEmails']);
     Route::get('/notification', [NotificationController::class, 'getAllData']);
+    Route::get('/notifications', [NotificationController::class, 'getNewNotifications']);
     Route::get('/restitution-count', [NotificationController::class, 'getRestitutionRequestCount']);
 
 

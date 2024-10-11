@@ -9,6 +9,7 @@ use App\Models\DeclarationDePerte;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Spatie\Permission\Traits\HasRoles;
+use App\Events\NewNotificationEvent;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\StoreDocumentRequest;
 use App\Mail\DocumentPublishedNotification;
@@ -64,7 +65,6 @@ class DocumentController extends Controller
             ->whereRaw('LOWER(LastNameIndoc) = ?', [strtolower($document->OwnerLastName)])
             ->get();
 
-
         foreach ($declarations as $declaration) {
             $user = $declaration->user; // Récupérer l'utilisateur qui a fait la déclaration
             $Phone = $document->user->Phone; // Récupérer le numéro de téléphone du propriétaire du document
@@ -72,6 +72,13 @@ class DocumentController extends Controller
 
             // Envoi de la notification par email
             Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
+
+            // Émettre un événement de notification
+            event(new NewNotificationEvent([
+                'title' => 'Nouveau document',
+                'message' => "Le document de {$document->OwnerFirstName} {$document->OwnerLastName} a été créé.",
+                'type' => 'document'
+            ]));
         }
 
         // Répondre avec le document créé
@@ -81,7 +88,6 @@ class DocumentController extends Controller
             'document' => $document
         ], 201);
     }
-
 
             /**
      * Display the specified resource.
@@ -192,7 +198,12 @@ class DocumentController extends Controller
         // Retourner une réponse JSON
         return response()->json(['message' => 'Demande de restitution envoyée avec succès.']);
     }
-
+    public function sendNotification(Request $request)
+    {
+        $message = $request->input('message');
+        broadcast(new NewNotificationEvent($message));  // Diffusion de l'événement
+        return response()->json(['status' => 'Notification sent!']);
+    }
 
 
     public function OwnPub()
