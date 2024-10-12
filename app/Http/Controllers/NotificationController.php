@@ -8,6 +8,7 @@ use App\Models\EmailLog;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 use App\Models\DeclarationDePerte;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\StoreNotificationRequest;
 use App\Http\Requests\UpdateNotificationRequest;
 
@@ -16,6 +17,25 @@ class NotificationController extends Controller
     /**
      * Display a listing of the resource.
      */
+    public function index() {
+        // Récupérer toutes les notifications
+        $notifications = Notification::all();
+        return response()->json(['data' => $notifications]);
+    }
+
+    public function markAsRead($id) {
+        $notification = Notification::find($id);
+
+        if (!$notification) {
+            return response()->json(['message' => 'Notification not found.'], 404);
+        }
+
+        // Marquez la notification comme lue
+        $notification->is_read = true;
+        $notification->save();
+
+        return response()->json(['message' => 'Notification marked as read.']);
+    }
 
      public function showAllEmails()
      {

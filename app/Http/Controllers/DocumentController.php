@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Document;
 use App\Models\EmailLog;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use App\Models\DeclarationDePerte;
 use Illuminate\Support\Facades\Auth;
@@ -57,8 +58,15 @@ class DocumentController extends Controller
             return response()->json(['error' => 'Aucun fichier image valide fourni'], 400);
         }
 
-        // Enregistre la ressource dans la base de données
+        // Enregistre le document dans la base de données
         $document->save();
+
+        // Notifier l'admin d'un nouveau document publié
+        Notification::create([
+            'message' => 'Un nouveau document a été publié : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
+            // 'document_id' => $document->id,
+            'is_read' => false, // Nouveau champ pour suivre l'état de lecture
+        ]);
 
         // Recherche des déclarations de perte correspondantes (insensible à la casse)
         $declarations = DeclarationDePerte::whereRaw('LOWER(FirstNameIndoc) = ?', [strtolower($document->OwnerFirstName)])
@@ -70,7 +78,7 @@ class DocumentController extends Controller
             $Phone = $document->user->Phone; // Récupérer le numéro de téléphone du propriétaire du document
             $documentUrl = route('documents.show', $document->id); // Générer l'URL pour afficher le document
 
-            // Envoi de la notification par email
+            // Envoi de la notification par email à l'utilisateur ayant fait la déclaration
             Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
 
             // Émettre un événement de notification
@@ -79,6 +87,13 @@ class DocumentController extends Controller
             //     'message' => "Le document de {$document->OwnerFirstName} {$document->OwnerLastName} a été créé.",
             //     'type' => 'document'
             // ]));
+
+            // Enregistrer une notification pour l'utilisateur
+            Notification::create([
+                'message' => 'Un document correspondant à une déclaration a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
+                // 'declaration_de_perte_id' => $declaration->id,
+                'is_read' => false, // Nouveau champ pour suivre l'état de lecture
+            ]);
         }
 
         // Répondre avec le document créé

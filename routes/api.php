@@ -41,7 +41,8 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/notification', [NotificationController::class, 'getAllData']);
     Route::get('/notifications', [NotificationController::class, 'getNewNotifications']);
     Route::get('/restitution-count', [NotificationController::class, 'getRestitutionRequestCount']);
-
+    Route::get('/notifications', [NotificationController::class, 'index']); // Pour récupérer toutes les notifications
+    Route::patch('notifications/{id}/mark-as-read', [NotificationController::class, 'markAsRead']);
 
 
 });
@@ -49,7 +50,6 @@ Route::apiResource('document', DocumentController::class);
 Route::get('documents/{document_id}/comments', [CommentaireController::class, 'getCommentairesByDocument']);
 Route::get('documents/{id}', [DocumentController::class, 'show']);
 Route::put('document/{id}', [DocumentController::class,'update'] );
-// Route::delete('document/{id}', [DocumentController::class, 'destroy']);
 
 
 
