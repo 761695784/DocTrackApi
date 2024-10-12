@@ -81,13 +81,6 @@ class DocumentController extends Controller
             // Envoi de la notification par email à l'utilisateur ayant fait la déclaration
             Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
 
-            // Émettre un événement de notification
-            // event(new NewNotificationEvent([
-            //     'title' => 'Nouveau document',
-            //     'message' => "Le document de {$document->OwnerFirstName} {$document->OwnerLastName} a été créé.",
-            //     'type' => 'document'
-            // ]));
-
             // Enregistrer une notification pour l'utilisateur
             Notification::create([
                 'message' => 'Un document correspondant à une déclaration a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,

@@ -53,13 +53,6 @@ class DeclarationDePerteController extends Controller
         foreach ($matchingDocuments as $document) {
             try {
                 $this->sendNotificationEmail($user, $document);
-
-                // Émettre un événement de notification
-                // event(new NewNotificationEvent([
-                //     'title' => 'Nouvelle déclaration de perte',
-                //     'message' => "Une déclaration de perte a été faite pour le document de {$document->OwnerFirstName} {$document->OwnerLastName}.",
-                //     'type' => 'declaration'
-                // ]));
             } catch (\Exception $e) {
                 Log::error('Erreur lors de l\'envoi de la notification : ' . $e->getMessage());
             }
