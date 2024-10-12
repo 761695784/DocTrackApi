@@ -24,7 +24,7 @@ class StoreDocumentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'image' => 'required|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'image' => 'required|file|mimes:jpeg,png,jpg,pdf|max:5120', // 5 Mo
             'OwnerFirstName' => 'required|string|max:255',
             'OwnerLastName' => 'required|string|max:255',
             'statut' => 'required|in:récupéré,non récupéré',
