@@ -2,6 +2,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Document;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use App\Models\DeclarationDePerte;
 use Illuminate\Support\Facades\Log;
@@ -35,6 +36,14 @@ class DeclarationDePerteController extends Controller
             'document_type_id' => $validatedData['document_type_id'],
             'user_id' => $user->id,
         ]);
+
+            // Création d'une notification
+            Notification::create([
+                'message' => 'Nouvelle déclaration de perte créée : ' . $declaration->Title .' ',$declaration->FirstNameInDoc . ' ' . $declaration->LastNameInDoc,
+                // 'declaration_de_perte_id' => $declaration->id,
+                'is_read' => false,
+            ]);
+
 
         $matchingDocuments = Document::where('document_type_id', $validatedData['document_type_id'])
             ->whereRaw('LOWER(OwnerFirstName) = LOWER(?)', [$validatedData['FirstNameInDoc']])
