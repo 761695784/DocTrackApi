@@ -28,10 +28,12 @@ Route::put('profil', [AuthController::class, 'updateProfile'])->middleware('auth
 
 Route::middleware('auth:api')->group(function () {
     Route::apiResource('document-types', DocumentTypeController::class);
-    Route::apiResource('documents', DocumentController::class)->only('store','show','index','destroy','restore');
-    Route::post('/documents/{id}/restore',[ DocumentController::class,'restore']);
+    Route::apiResource('documents', DocumentController::class)->only('store','show','index','destroy');
     Route::apiResource('declarations', DeclarationDePerteController::class);
-    Route::post('declarations/{id}/restore', [DeclarationDePerteController::class, 'restore']);
+    Route::get('trash', [DeclarationDePerteController::class, 'trashedDeclarations']);
+    Route::post('/declarations/restore/{id}', [DeclarationDePerteController::class, 'restoreTrashedDeclaration']);
+    Route::get('trashed', [DocumentController::class, 'trashedDocuments']);
+    Route::post('/documents/restore/{id}', [DocumentController::class, 'restoreTrashedDocument']);
     Route::apiResource('comments', CommentaireController::class);
     Route::post('documents/{id}/restitution', [DocumentController::class, 'requestRestitution']);
     route::get('mypub',[DocumentController::class, 'OwnPub']);

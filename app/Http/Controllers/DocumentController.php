@@ -178,34 +178,56 @@ public function index()
         ], 403);
     }
 
-    public function restore($id)
+    public function restoreTrashedDocument($id)
     {
-        $user = Auth::user();
+        $user = Auth::user(); // Récupérer l'utilisateur authentifié
 
         if (!$user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Vous devez être authentifié pour effectuer cette action.'
-            ], 401);
+            ], 401); // Code 401 Unauthorized
         }
 
         // Trouver le document même s'il est soft deleted
-        $document = Document::withTrashed()->findOrFail($id);
+        $document = Document::onlyTrashed()->findOrFail($id);
 
-          // Vérifier si l'utilisateur est admin ou est propriétaire du document
-            if ($user->hasRole('Admin') || $document->user_id === $user->id) {
-                $document->restore(); // Restaurer le document soft deleted
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Publication restaurée avec succès.'
-                ]);
-            }
+        // Vérifier si l'utilisateur est le propriétaire du document
+        if ($document->user_id === $user->id) {
+            $document->restore(); // Restaurer le document soft deleted
+            return response()->json([
+                'success' => true,
+                'message' => 'Document restauré avec succès.'
+            ]);
+        }
 
         return response()->json([
             'success' => false,
-            'message' => 'Accès refusé. Vous ne pouvez restaurer que vos propres publications.'
+            'message' => 'Accès refusé. Vous ne pouvez restaurer que vos propres documents.'
         ], 403);
     }
+
+
+
+    public function trashedDocuments()
+{
+    $user = Auth::user(); // Récupérer l'utilisateur authentifié
+
+    if (!$user) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Vous devez être authentifié pour effectuer cette action.'
+        ], 401); // Code 401 Unauthorized
+    }
+
+    // Récupérer uniquement les documents supprimés de l'utilisateur connecté
+    $documents = Document::onlyTrashed()->where('user_id', $user->id)->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $documents
+    ]);
+}
 
 
     /**
