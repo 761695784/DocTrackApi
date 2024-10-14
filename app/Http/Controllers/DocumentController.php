@@ -7,29 +7,43 @@ use App\Models\EmailLog;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 use App\Models\DeclarationDePerte;
+use App\Events\NewNotificationEvent;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Spatie\Permission\Traits\HasRoles;
-use App\Events\NewNotificationEvent;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\StoreDocumentRequest;
 use App\Mail\DocumentPublishedNotification;
 use App\Http\Requests\UpdateDocumentRequest;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Notifications\RestitutionRequestNotification;
 
 class DocumentController extends Controller
 {
+    use SoftDeletes;
+
     /**
      * Display a listing of the resource.
      */
-    public function index()
+/**
+ * Display a listing of the resource.
+ */
+public function index()
 {
-    // Récupère tous les documents avec les informations de l'utilisateur associé
-    $documents = Document::with('user')->get();
+    $user = Auth::user(); // Récupérer l'utilisateur authentifié
+
+    // Si l'utilisateur est un admin, récupérer tous les documents (y compris ceux supprimés)
+    if ($user && $user->hasRole('Admin')) {
+        $documents = Document::withTrashed()->with('user')->get();
+    } else {
+        // Récupère uniquement les documents actifs (non supprimés)
+        $documents = Document::whereNull('deleted_at')->with('user')->get();
+    }
 
     // Retourne les documents en JSON, y compris les informations de l'utilisateur
     return response()->json($documents);
 }
+
     /**
      * Store a newly created resource in storage.
      */
@@ -149,18 +163,47 @@ class DocumentController extends Controller
 
         $document = Document::findOrFail($id);
 
-        // Si l'utilisateur est un simple utilisateur, vérifier qu'il est propriétaire de la déclaration
+        // Si l'utilisateur est un simple utilisateur, vérifier qu'il est propriétaire de la publication
         if ($user->hasRole('Admin') || $document->user_id === $user->id) {
-            $document->delete();
+            $document->delete(); // Ceci marque le document comme supprimé (soft delete)
             return response()->json([
                 'success' => true,
-                'message' => 'Publications supprimée avec succès.'
+                'message' => 'Publication supprimée avec succès.'
             ]);
         }
 
         return response()->json([
             'success' => false,
             'message' => 'Accès refusé. Vous ne pouvez supprimer que vos propres publications.'
+        ], 403);
+    }
+
+    public function restore($id)
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous devez être authentifié pour effectuer cette action.'
+            ], 401);
+        }
+
+        // Trouver le document même s'il est soft deleted
+        $document = Document::withTrashed()->findOrFail($id);
+
+          // Vérifier si l'utilisateur est admin ou est propriétaire du document
+            if ($user->hasRole('Admin') || $document->user_id === $user->id) {
+                $document->restore(); // Restaurer le document soft deleted
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Publication restaurée avec succès.'
+                ]);
+            }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Accès refusé. Vous ne pouvez restaurer que vos propres publications.'
         ], 403);
     }
 
@@ -206,12 +249,6 @@ class DocumentController extends Controller
         // Retourner une réponse JSON
         return response()->json(['message' => 'Demande de restitution envoyée avec succès.']);
     }
-    // public function sendNotification(Request $request)
-    // {
-    //     $message = $request->input('message');
-    //     broadcast(new NewNotificationEvent($message));  // Diffusion de l'événement
-    //     return response()->json(['status' => 'Notification sent!']);
-    // }
 
 
     public function OwnPub()

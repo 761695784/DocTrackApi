@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Database\Eloquent\Model;
 use App\Mail\DocumentPublishedNotification;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class DeclarationDePerte extends Model
 {
-    use HasFactory;
+    use HasFactory;    use SoftDeletes;
 
     protected $guarded = [];
 

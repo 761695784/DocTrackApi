@@ -110,6 +110,7 @@ class DeclarationDePerteController extends Controller
     {
         $user = Auth::user();
 
+        // Si l'utilisateur n'est pas authentifié, retourner une erreur
         if (!$user) {
             return response()->json([
                 'success' => false,
@@ -117,11 +118,11 @@ class DeclarationDePerteController extends Controller
             ], 401); // Code 401 Unauthorized
         }
 
-        // Si l'utilisateur est un administrateur, récupérer toutes les déclarations
+        // Si l'utilisateur est un administrateur, récupérer toutes les déclarations (y compris celles supprimées)
         if ($user->hasRole('Admin')) {
-            $declarations = DeclarationDePerte::with('user')->get();
+            $declarations = DeclarationDePerte::withTrashed()->with('user')->get();
         } else {
-            // Si l'utilisateur est un simple utilisateur, ne récupérer que ses propres déclarations
+            // Si l'utilisateur est un simple utilisateur, ne récupérer que ses propres déclarations (non supprimées)
             $declarations = DeclarationDePerte::with('user')->where('user_id', $user->id)->get();
         }
 
@@ -130,6 +131,7 @@ class DeclarationDePerteController extends Controller
             'data' => $declarations
         ]);
     }
+
 
     public function getUserDeclarations()
 {
@@ -194,7 +196,7 @@ class DeclarationDePerteController extends Controller
 
         // Si l'utilisateur est un simple utilisateur, vérifier qu'il est propriétaire de la déclaration
         if ($user->hasRole('Admin') || $declaration->user_id === $user->id) {
-            $declaration->delete();
+            $declaration->delete(); // Ceci marque la déclaration comme supprimée (soft delete)
             return response()->json([
                 'success' => true,
                 'message' => 'Déclaration de perte supprimée avec succès.'
@@ -207,5 +209,31 @@ class DeclarationDePerteController extends Controller
         ], 403);
     }
 
+    public function restore($id)
+{
+    $user = Auth::user();
+
+    if (!$user) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Vous devez être authentifié pour effectuer cette action.'
+        ], 401);
+    }
+
+    $declaration = DeclarationDePerte::withTrashed()->findOrFail($id);
+
+    if ($user->hasRole('Admin') || $declaration->user_id === $user->id) {
+        $declaration->restore(); // Restaurer la déclaration supprimée
+        return response()->json([
+            'success' => true,
+            'message' => 'Déclaration restaurée avec succès.'
+        ]);
+    }
+
+    return response()->json([
+        'success' => false,
+        'message' => 'Accès refusé. Vous ne pouvez restaurer que vos propres déclarations.'
+    ], 403);
+}
 
 }

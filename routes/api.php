@@ -28,13 +28,14 @@ Route::put('profil', [AuthController::class, 'updateProfile'])->middleware('auth
 
 Route::middleware('auth:api')->group(function () {
     Route::apiResource('document-types', DocumentTypeController::class);
-    Route::apiResource('documents', DocumentController::class)->only('store','show','index','destroy');
+    Route::apiResource('documents', DocumentController::class)->only('store','show','index','destroy','restore');
+    Route::post('/documents/{id}/restore',[ DocumentController::class,'restore']);
     Route::apiResource('declarations', DeclarationDePerteController::class);
+    Route::post('declarations/{id}/restore', [DeclarationDePerteController::class, 'restore']);
     Route::apiResource('comments', CommentaireController::class);
     Route::post('documents/{id}/restitution', [DocumentController::class, 'requestRestitution']);
     route::get('mypub',[DocumentController::class, 'OwnPub']);
     Route::get('mydec', [DeclarationDePerteController::class, 'getUserDeclarations']);
-
     Route::get('/correspondence', [NotificationController::class, 'showAllCorrespondenceEmails']);
     Route::get('/restitution', [NotificationController::class, 'showAllRestitutionEmails']);
     Route::get('/emails', [NotificationController::class,'showAllEmails']);
