@@ -46,6 +46,8 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/restitution-count', [NotificationController::class, 'getRestitutionRequestCount']);
     Route::get('/notifications', [NotificationController::class, 'index']); // Pour récupérer toutes les notifications
     Route::patch('notifications/{id}/mark-as-read', [NotificationController::class, 'markAsRead']);
+    Route::get('all', [DocumentController::class, 'getAllPublications']);
+
 
 
 });

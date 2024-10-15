@@ -144,12 +144,11 @@ class DeclarationDePerteController extends Controller
         }
 
         // Récupérer les déclarations supprimées de l'utilisateur connecté
-        $declarations = DeclarationDePerte::where('user_id', $user->id)
-            ->whereNotNull('deleted_at')
+        $declarations = DeclarationDePerte::onlyTrashed()
+            ->where('user_id', $user->id)
+            ->with('user')
             ->get();
 
-        // Log pour vérifier les résultats
-        Log::info('Déclarations supprimées pour l\'utilisateur : ' . $user->id, ['declarations' => $declarations]);
 
         if ($declarations->isEmpty()) {
             return response()->json([
@@ -164,6 +163,8 @@ class DeclarationDePerteController extends Controller
             'data' => $declarations
         ]);
     }
+
+
 
 
     public function restoreTrashedDeclaration($id)
@@ -196,26 +197,27 @@ class DeclarationDePerteController extends Controller
 
 
 
-    public function getUserDeclarations()
-{
-    // Vérifier si l'utilisateur est authentifié
-    $user = Auth::user();
 
-    if (!$user) {
+        public function getUserDeclarations()
+    {
+        // Vérifier si l'utilisateur est authentifié
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous devez être authentifié pour voir vos déclarations.'
+            ], 401);
+        }
+
+        // Récupérer les déclarations faites par l'utilisateur connecté
+        $declarations = DeclarationDePerte::where('user_id', $user->id)->get();
+
         return response()->json([
-            'success' => false,
-            'message' => 'Vous devez être authentifié pour voir vos déclarations.'
-        ], 401);
+            'success' => true,
+            'data' => $declarations
+        ]);
     }
-
-    // Récupérer les déclarations faites par l'utilisateur connecté
-    $declarations = DeclarationDePerte::where('user_id', $user->id)->get();
-
-    return response()->json([
-        'success' => true,
-        'data' => $declarations
-    ]);
-}
 
     public function show($id)
     {

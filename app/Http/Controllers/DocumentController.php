@@ -44,6 +44,24 @@ public function index()
     return response()->json($documents);
 }
 
+public function getAllPublications(Request $request)
+{
+    // Vérifie si l'utilisateur est connecté
+    if (Auth::check()) {
+        // Récupère toutes les publications, y compris les supprimées (soft deleted)
+        $documents = Document::withTrashed()->with('user')->get(); // Inclut les soft deletes et les infos de l'utilisateur
+
+        return response()->json($documents); // Retourne le tableau directement
+    } else {
+        // Si l'utilisateur n'est pas connecté, retourne un message d'erreur
+        return response()->json([
+            'success' => false,
+            'message' => 'Utilisateur non authentifié',
+        ], 401); // Code 401 pour l'authentification non autorisée
+    }
+}
+
+
     /**
      * Store a newly created resource in storage.
      */
@@ -210,24 +228,28 @@ public function index()
 
 
     public function trashedDocuments()
-{
-    $user = Auth::user(); // Récupérer l'utilisateur authentifié
+    {
+        $user = Auth::user(); // Récupérer l'utilisateur authentifié
 
-    if (!$user) {
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous devez être authentifié pour effectuer cette action.'
+            ], 401); // Code 401 Unauthorized
+        }
+
+        // Récupérer uniquement les documents supprimés de l'utilisateur connecté
+        $documents = Document::onlyTrashed()
+            ->where('user_id', $user->id)
+            ->with('user') // Charge les informations de l'utilisateur associé à chaque document
+            ->get();
+
         return response()->json([
-            'success' => false,
-            'message' => 'Vous devez être authentifié pour effectuer cette action.'
-        ], 401); // Code 401 Unauthorized
+            'success' => true,
+            'data' => $documents
+        ]);
     }
 
-    // Récupérer uniquement les documents supprimés de l'utilisateur connecté
-    $documents = Document::onlyTrashed()->where('user_id', $user->id)->get();
-
-    return response()->json([
-        'success' => true,
-        'data' => $documents
-    ]);
-}
 
 
     /**
