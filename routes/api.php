@@ -47,7 +47,10 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']); // Pour récupérer toutes les notifications
     Route::patch('notifications/{id}/mark-as-read', [NotificationController::class, 'markAsRead']);
     Route::get('all', [DocumentController::class, 'getAllPublications']);
-
+    Route::get('doctype', [DocumentController::class, 'getPublicationsByType']);
+    Route::get('taux', [DocumentController::class, 'getRestitutionData']);
+    Route::get('mail', [DocumentController::class, 'getEmailActivity']);
+    Route::get('stat', [DocumentController::class, 'getStatistics']);
 
 
 });

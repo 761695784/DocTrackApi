@@ -120,10 +120,10 @@ class DeclarationDePerteController extends Controller
 
         // Si l'utilisateur est un administrateur, récupérer toutes les déclarations (y compris celles supprimées)
         if ($user->hasRole('Admin')) {
-            $declarations = DeclarationDePerte::withTrashed()->with('user')->get();
+            $declarations = DeclarationDePerte::withTrashed()->with(['user', 'documentType'])->get();
         } else {
             // Si l'utilisateur est un simple utilisateur, ne récupérer que ses propres déclarations (non supprimées)
-            $declarations = DeclarationDePerte::with('user')->where('user_id', $user->id)->get();
+            $declarations = DeclarationDePerte::with(['user', 'documentType'])->where('user_id', $user->id)->get();
         }
 
         return response()->json([
@@ -131,6 +131,7 @@ class DeclarationDePerteController extends Controller
             'data' => $declarations
         ]);
     }
+
 
     public function trashedDeclarations()
     {
@@ -198,26 +199,29 @@ class DeclarationDePerteController extends Controller
 
 
 
-        public function getUserDeclarations()
-    {
-        // Vérifier si l'utilisateur est authentifié
-        $user = Auth::user();
+    public function getUserDeclarations()
+{
+    // Vérifier si l'utilisateur est authentifié
+    $user = Auth::user();
 
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Vous devez être authentifié pour voir vos déclarations.'
-            ], 401);
-        }
-
-        // Récupérer les déclarations faites par l'utilisateur connecté
-        $declarations = DeclarationDePerte::where('user_id', $user->id)->get();
-
+    if (!$user) {
         return response()->json([
-            'success' => true,
-            'data' => $declarations
-        ]);
+            'success' => false,
+            'message' => 'Vous devez être authentifié pour voir vos déclarations.'
+        ], 401);
     }
+
+    // Récupérer les déclarations faites par l'utilisateur connecté avec les informations de l'utilisateur et du type de document
+    $declarations = DeclarationDePerte::where('user_id', $user->id)
+        ->with(['user', 'documentType']) // Charger les relations user et documentType
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $declarations
+    ]);
+}
+
 
     public function show($id)
     {
@@ -230,7 +234,8 @@ class DeclarationDePerteController extends Controller
             ], 401); // Code 401 Unauthorized
         }
 
-        $declaration = DeclarationDePerte::with('user')->findOrFail($id);
+        // Charge les informations de l'utilisateur et le type de document
+        $declaration = DeclarationDePerte::with(['user', 'documentType'])->findOrFail($id);
 
         // Si l'utilisateur est un simple utilisateur, vérifier qu'il est propriétaire de la déclaration
         if ($user->hasRole('Admin') || $declaration->user_id === $user->id) {
@@ -245,6 +250,7 @@ class DeclarationDePerteController extends Controller
             'message' => 'Accès refusé. Vous ne pouvez voir que vos propres déclarations.'
         ], 403);
     }
+
 
     public function destroy($id)
     {

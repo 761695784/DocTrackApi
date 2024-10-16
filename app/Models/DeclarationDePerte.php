@@ -14,8 +14,8 @@ class DeclarationDePerte extends Model
 
     protected $guarded = [];
 
-    public function documenttype() {
-        return $this->belongsTo(Document::class);
+    public function documentType() {
+        return $this->belongsTo(DocumentType::class, 'document_type_id'); // Assurez-vous que 'document_type_id' est la bonne clé étrangère
     }
 
     public function user() {

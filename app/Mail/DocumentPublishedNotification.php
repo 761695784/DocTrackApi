@@ -30,7 +30,7 @@ class DocumentPublishedNotification extends Mailable
                     ->markdown('emails.document.published', [
                         'document' => $this->document,
                         'Phone' => $this->Phone,
-                        'documentUrl' => $frontendUrl, 
+                        'documentUrl' => $frontendUrl,
                     ]);
     }
 }

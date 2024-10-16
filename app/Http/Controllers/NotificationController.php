@@ -117,8 +117,13 @@ public function showAllRestitutionEmails()
 // API Controller in Laravel (Example)
 public function getAllData()
 {
-    $declarations = DeclarationDePerte::all();
-    $publications = Document::all();
+    // Récupère toutes les déclarations (y compris les supprimées avec soft delete)
+    $declarations = DeclarationDePerte::withTrashed()->with(['user', 'documentType'])->get();
+
+    // Récupère toutes les publications (y compris les supprimées avec soft delete)
+    $publications = Document::withTrashed()->with(['user', 'documentType'])->get();
+
+    // Récupère tous les emails envoyés liés aux documents avec les relations associées
     $emailsSent = EmailLog::with(['document', 'requester', 'publisher', 'declarant'])->get();
 
     return response()->json([
@@ -142,10 +147,11 @@ public function getAllData()
 }
 
 
+
 public function getRestitutionRequestCount()
 {
     // Compte le nombre d'enregistrements dans la table des logs d'emails liés à une restitution
-    $count = EmailLog::where('subject', 'LIKE', '%Demande de restitution du document%')->count();
+    $count = EmailLog::where('subject', 'LIKE', '%Demande de restitution%')->count();
 
     return response()->json(['count' => $count]);
 }

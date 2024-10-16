@@ -6,7 +6,9 @@ use App\Models\Document;
 use App\Models\EmailLog;
 use App\Models\Notification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use App\Models\DeclarationDePerte;
+use Illuminate\Support\Facades\DB;
 use App\Events\NewNotificationEvent;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -34,13 +36,13 @@ public function index()
 
     // Si l'utilisateur est un admin, récupérer tous les documents (y compris ceux supprimés)
     if ($user && $user->hasRole('Admin')) {
-        $documents = Document::withTrashed()->with('user')->get();
+        $documents = Document::withTrashed()->with(['user', 'documentType'])->get();
     } else {
         // Récupère uniquement les documents actifs (non supprimés)
-        $documents = Document::whereNull('deleted_at')->with('user')->get();
+        $documents = Document::whereNull('deleted_at')->with(['user', 'documentType'])->get();
     }
 
-    // Retourne les documents en JSON, y compris les informations de l'utilisateur
+    // Retourne les documents en JSON, y compris les informations de l'utilisateur et du type de document
     return response()->json($documents);
 }
 
@@ -49,7 +51,7 @@ public function getAllPublications(Request $request)
     // Vérifie si l'utilisateur est connecté
     if (Auth::check()) {
         // Récupère toutes les publications, y compris les supprimées (soft deleted)
-        $documents = Document::withTrashed()->with('user')->get(); // Inclut les soft deletes et les infos de l'utilisateur
+        $documents = Document::withTrashed()->with(['user', 'documentType'])->get(); // Inclut les soft deletes et les infos de l'utilisateur
 
         return response()->json($documents); // Retourne le tableau directement
     } else {
@@ -133,7 +135,7 @@ public function getAllPublications(Request $request)
      * Display the specified resource.
      */
     public function show($id) {
-        $document = Document::with('user')->find($id); // Charge les détails de l'utilisateur associé
+        $document = Document::with(['user', 'documentType'])->find($id); // Charge les détails de l'utilisateur associé
         if (!$document) {
             return response()->json(['message' => 'Document not found'], 404);
         }
@@ -296,11 +298,83 @@ public function getAllPublications(Request $request)
 
 
     public function OwnPub()
-{
-    // Récupère uniquement les documents de l'utilisateur connecté
-    $documents = Document::where('user_id', Auth::id())->with('user')->get();
+    {
+        // Récupère uniquement les documents de l'utilisateur connecté
+        $documents = Document::where('user_id', Auth::id())->with(['user', 'documentType'])->get();
 
-    // Retourne les documents en JSON, y compris les informations de l'utilisateur
-    return response()->json($documents);
-}
+        // Retourne les documents en JSON, y compris les informations de l'utilisateur
+        return response()->json($documents);
+    }
+
+    public function getPublicationsByType()
+    {
+        $publications = Document::select('document_type_id', DB::raw('count(*) as count'))
+                                ->groupBy('document_type_id')
+                                ->with('documentType') // Charger le nom du type
+                                ->get();
+
+        return response()->json([
+            'data' => $publications->map(function($publication) {
+                return [
+                    'typeName' => $publication->documentType->TypeName,
+                    'count' => $publication->count,
+                ];
+            })
+        ]);
+    }
+
+    public function getRestitutionData()
+    {
+        $restitutionCount = EmailLog::where('subject', 'LIKE', '%Demande de restitution%')->count();
+        $publicationCount = Document::withTrashed()->count(); // ou avec les soft deleted si nécessaire
+
+        return response()->json([
+            'restitutionCount' => $restitutionCount,
+            'publicationCount' => $publicationCount,
+        ]);
+    }
+
+    public function getEmailActivity()
+    {
+        // Compte le nombre d'emails envoyés par sujet
+        $emailCounts = EmailLog::select('subject', DB::raw('count(*) as count'))
+            ->groupBy('subject')
+            ->get();
+
+        return response()->json($emailCounts);
+    }
+
+
+    /**
+     * Get statistics of declarations and publications by date.
+     */
+    public function getStatistics()
+    {
+        // Récupérer les données par date
+        $startDate = Carbon::now()->startOfMonth(); // Début du mois actuel
+        $endDate = Carbon::now()->endOfMonth(); // Fin du mois actuel
+
+        $data = [];
+
+        // Boucle sur chaque jour du mois
+        for ($date = $startDate; $date <= $endDate; $date->addDay()) {
+            $formattedDate = $date->toDateString(); // Format de la date YYYY-MM-DD
+
+            // Compte les déclarations de perte pour la date donnée
+            $declarationsCount = DeclarationDePerte::whereDate('created_at', $formattedDate)->count();
+
+            // Compte les publications pour la date donnée
+            $publicationsCount = Document::whereDate('created_at', $formattedDate)->count();
+
+            // Ajoute les données au tableau
+            $data[] = [
+                'date' => $formattedDate,
+                'declarations' => $declarationsCount,
+                'publications' => $publicationsCount,
+            ];
+        }
+
+        return response()->json(['data' => $data]);
+    }
+
 }
