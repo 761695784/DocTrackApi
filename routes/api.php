@@ -51,6 +51,8 @@ Route::middleware('auth:api')->group(function () {
     Route::get('taux', [DocumentController::class, 'getRestitutionData']);
     Route::get('mail', [DocumentController::class, 'getEmailActivity']);
     Route::get('stat', [DocumentController::class, 'getStatistics']);
+    Route::get('status-count', [DocumentController::class,'getDocumentStatusCountWithTrashed']);
+    Route::get('lieu', [DocumentController::class,'getPublicationsByLocation']);
 
 
 });

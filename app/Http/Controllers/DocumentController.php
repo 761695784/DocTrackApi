@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use GuzzleHttp\Client;
 use App\Models\Document;
 use App\Models\EmailLog;
 use App\Models\Notification;
@@ -376,5 +377,94 @@ public function getAllPublications(Request $request)
 
         return response()->json(['data' => $data]);
     }
+
+    public function getDocumentStatusCountWithTrashed(Request $request)
+    {
+        // Vérifie si l'utilisateur est connecté
+        if (Auth::check()) {
+            // Récupère le nombre de documents avec le statut "récupéré", y compris ceux soft deleted
+            $recoveredCount = Document::withTrashed()->where('statut', 'récupéré')->count();
+
+            // Récupère le nombre de documents avec le statut "non récupéré", y compris ceux soft deleted
+            $notRecoveredCount = Document::withTrashed()->where('statut', 'non récupéré')->count();
+
+            // Retourne les résultats en JSON
+            return response()->json([
+                'récupéré' => $recoveredCount,
+                'non_récupéré' => $notRecoveredCount,
+            ]);
+        } else {
+            // Si l'utilisateur n'est pas connecté, retourne un message d'erreur
+            return response()->json([
+                'success' => false,
+                'message' => 'Utilisateur non authentifié',
+            ], 401); // Code 401 pour l'authentification non autorisée
+        }
+    }
+
+    public function getCoordinates($location)
+    {
+        // Créer un client Guzzle pour faire une requête HTTP
+        $client = new Client();
+        $url = 'https://nominatim.openstreetmap.org/search';
+
+        try {
+            // Faire une requête GET à Nominatim
+            $response = $client->get($url, [
+                'query' => [
+                    'q' => $location, // Le lieu dont tu veux obtenir les coordonnées
+                    'format' => 'json', // Format de la réponse
+                    'limit' => 1 // Limiter à un seul résultat
+                ]
+            ]);
+
+            // Décoder la réponse JSON
+            $data = json_decode($response->getBody(), true);
+
+            // Vérifier si les données existent
+            if (isset($data[0])) {
+                return [
+                    'latitude' => $data[0]['lat'],
+                    'longitude' => $data[0]['lon']
+                ];
+            }
+
+            // Si aucune coordonnée n'a été trouvée
+            return [
+                'latitude' => null,
+                'longitude' => null
+            ];
+        } catch (\Exception $e) {
+            // Gérer les erreurs
+            return [
+                'latitude' => null,
+                'longitude' => null,
+                'error' => 'Erreur lors de la récupération des coordonnées.'
+            ];
+        }
+    }
+
+    // Méthode pour récupérer les publications et leurs coordonnées
+    public function getPublicationsByLocation()
+    {
+        $publications = Document::select('Location', DB::raw('COUNT(*) as publications'))
+                        ->groupBy('Location')
+                        ->get();
+
+        $regions = $publications->map(function($publication) {
+            // Utiliser la fonction getCoordinates pour obtenir les lat/long du lieu
+            $coords = $this->getCoordinates($publication->Location);
+
+            return [
+                'name' => $publication->Location,
+                'latitude' => $coords['latitude'],
+                'longitude' => $coords['longitude'],
+                'publications' => $publication->publications
+            ];
+        });
+
+        return response()->json($regions);
+    }
+
 
 }
