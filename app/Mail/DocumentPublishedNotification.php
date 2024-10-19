@@ -24,13 +24,13 @@ class DocumentPublishedNotification extends Mailable
     public function build()
     {
         // Assurez-vous que $documentUrl correspond au chemin correct du frontend
-        $frontendUrl = 'https://sendoctrack.netlify.app/document/' . $this->document->id;
+        $documentUrl = url('https://sendoctrack.netlify.app/document/' . $this->document->id); // Générer l'URL de la publication
 
         return $this->subject('Correspondance à votre déclaration de perte')
                     ->markdown('emails.document.published', [
                         'document' => $this->document,
                         'Phone' => $this->Phone,
-                        'documentUrl' => $frontendUrl,
+                        'documentUrl' => $documentUrl,
                     ]);
     }
 }

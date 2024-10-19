@@ -111,7 +111,7 @@ public function getAllPublications(Request $request)
         foreach ($declarations as $declaration) {
             $user = $declaration->user; // Récupérer l'utilisateur qui a fait la déclaration
             $Phone = $document->user->Phone; // Récupérer le numéro de téléphone du propriétaire du document
-            $documentUrl = route('documents.show', $document->id); // Générer l'URL pour afficher le document
+            $documentUrl = $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id; // Générer l'URL pour afficher le document
 
             // Envoi de la notification par email à l'utilisateur ayant fait la déclaration
             Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
