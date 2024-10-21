@@ -74,25 +74,24 @@ class DeclarationDePerteController extends Controller
             // Envoi de l'email
             Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
 
-            // Log d'email avec information du publisher et du requester
-            $emailLog = \App\Models\EmailLog::create([
+            // Enregistrer un log d'email dans la table email_logs
+            \App\Models\EmailLog::create([
                 'from' => config('mail.from.address'),
                 'to' => $user->email,
                 'subject' => 'Correspondance à votre déclaration de perte',
                 'body' => 'Le document publié correspondant aux informations : ' .
                           $document->OwnerFirstName . ' ' . $document->OwnerLastName .
-                          ' avec le téléphone : ' . $Phone,
+                          ' avec le numéro du publicateur : ' . $Phone,
                 'publisher_user_id' => $document->user->id,
                 'requester_user_id' => $user->id,
                 'document_id' => $document->id,
                 'declarant_user_id' => $user->id,
             ]);
 
-            Log::info('Email log enregistré avec succès pour l\'utilisateur ' . $user->email, [
-                'email_log' => $emailLog
-            ]);
+            Log::info('Email log enregistré avec succès pour l\'utilisateur ' . $user->email);
+
         } catch (\Exception $e) {
-            Log::error('Erreur lors de l\'enregistrement de l\'email log : ' . $e->getMessage(), [
+            Log::error('Erreur lors de l\'envoi ou de l\'enregistrement de l\'email log : ' . $e->getMessage(), [
                 'publisher_user_id' => $document->user->id,
                 'requester_user_id' => $user->id,
                 'document_id' => $document->id,

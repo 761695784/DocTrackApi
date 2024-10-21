@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use App\Models\DeclarationDePerte;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Events\NewNotificationEvent;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -113,9 +114,34 @@ public function getAllPublications(Request $request)
             $Phone = $document->user->Phone; // Récupérer le numéro de téléphone du propriétaire du document
             $documentUrl = $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id; // Générer l'URL pour afficher le document
 
-            // Envoi de la notification par email à l'utilisateur ayant fait la déclaration
-            Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
+            try {
+                // Envoi de l'email
+                Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
 
+                // Enregistrer un log d'email dans la table email_logs
+                \App\Models\EmailLog::create([
+                    'from' => config('mail.from.address'),
+                    'to' => $user->email,
+                    'subject' => 'Correspondance à votre déclaration de perte',
+                    'body' => 'Le document publié correspondant aux informations : ' .
+                              $document->OwnerFirstName . ' ' . $document->OwnerLastName .
+                              ' avec le numéro du publicateur : ' . $Phone,
+                    'publisher_user_id' => $document->user->id,
+                    'requester_user_id' => $user->id,
+                    'document_id' => $document->id,
+                    'declarant_user_id' => $user->id,
+                ]);
+
+                Log::info('Email log enregistré avec succès pour l\'utilisateur ' . $user->email);
+
+            } catch (\Exception $e) {
+                Log::error('Erreur lors de l\'envoi ou de l\'enregistrement de l\'email log : ' . $e->getMessage(), [
+                    'publisher_user_id' => $document->user->id,
+                    'requester_user_id' => $user->id,
+                    'document_id' => $document->id,
+                    'declarant_user_id' => $user->id,
+                ]);
+            }
             // Enregistrer une notification pour l'utilisateur
             Notification::create([
                 'message' => 'Un document correspondant à une déclaration a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
