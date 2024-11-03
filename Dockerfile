@@ -24,18 +24,25 @@ RUN composer install --no-interaction --prefer-dist --optimize-autoloader --verb
 
 RUN composer require php-open-source-saver/jwt-auth
 
+RUN composer require laravel/octane
+
+RUN composer require spiral/roadrunner
+
 RUN chown -R www-data:www-data /app
 
 RUN php artisan storage:link
 
 # Exécutez les commandes ici dans le bon ordre
 CMD php artisan vendor:publish --provider="PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider" && \
+    php artisan octane:install && \
+    php artisan vendor:publish --provider="Spiral\RoadRunner\RoadRunnerServiceProvider" && \
     php artisan key:generate && \
     php artisan migrate:refresh && \
     php artisan db:seed --class=RolesAndPermissionsSeeder && \
     php artisan db:seed --class=UserSeeder && \
     php artisan db:seed --class=DocumentTypeSeeder && \
     php artisan jwt:secret --force && \
-    php artisan serve --host=0.0.0.0 --port=8181
+    php artisan octane:start --server=roadrunner --port=8181 --workers=8
+    # php artisan serve --host=0.0.0.0 --port=8181
 
 EXPOSE 8181

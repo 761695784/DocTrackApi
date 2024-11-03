@@ -9,9 +9,12 @@
         "darkaonline/l5-swagger": "^8.6",
         "google/cloud-vision": "^1.9",
         "laravel/framework": "^11.0",
+        "laravel/octane": "^2.5",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.9",
         "spatie/laravel-permission": "^6.9",
+        "spiral/roadrunner-cli": "^2.6.0",
+        "spiral/roadrunner-http": "^3.3.0",
         "tymon/jwt-auth": "^2.1"
     },
     "require-dev": {

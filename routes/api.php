@@ -52,7 +52,6 @@ Route::middleware('auth:api')->group(function () {
     Route::get('mail', [DocumentController::class, 'getEmailActivity']);
     Route::get('stat', [DocumentController::class, 'getStatistics']);
     Route::get('status-count', [DocumentController::class,'getDocumentStatusCountWithTrashed']);
-    Route::get('lieu', [DocumentController::class,'getPublicationsByLocation']);
 
 
 });
@@ -60,7 +59,7 @@ Route::apiResource('document', DocumentController::class);
 Route::get('documents/{document_id}/comments', [CommentaireController::class, 'getCommentairesByDocument']);
 Route::get('documents/{id}', [DocumentController::class, 'show']);
 Route::put('document/{id}', [DocumentController::class,'update'] );
-
+Route::get('lieu', [DocumentController::class,'getPublicationsByLocation']);
 
 
 
