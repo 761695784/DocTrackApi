@@ -12,13 +12,16 @@ RUN apt-get update -y && apt-get install -y \
     pkg-config \
     libssl-dev \
     mariadb-client \
-    && docker-php-ext-install pdo_mysql mbstring
+    && docker-php-ext-install pdo_mysql mbstring sockets pcntl
+
 
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 WORKDIR /app
 
 COPY . /app
+
+RUN docker-php-ext-install sockets
 
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader --verbose
 
@@ -42,7 +45,7 @@ CMD php artisan vendor:publish --provider="PHPOpenSourceSaver\JWTAuth\Providers\
     php artisan db:seed --class=UserSeeder && \
     php artisan db:seed --class=DocumentTypeSeeder && \
     php artisan jwt:secret --force && \
-    php artisan octane:start --server=roadrunner --port=8181 --workers=8
+    php artisan octane:start --host=0.0.0.0  --port=8181
     # php artisan serve --host=0.0.0.0 --port=8181
 
 EXPOSE 8181
