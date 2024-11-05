@@ -431,20 +431,22 @@ public function getAllPublications(Request $request)
 
     public function getCoordinates($location)
     {
+        // Vérifie si les coordonnées sont déjà dans le cache
         $cacheKey = 'coordinates_' . $location;
         if (Cache::has($cacheKey)) {
             return Cache::get($cacheKey);
         }
 
         $client = new Client();
-        $url = 'https://api.opencagedata.com/geocode/v1/json';
+        $url = 'https://api.opencagedata.com/geocode/v1/json'; // Limites gratuites : Jusqu'à 2 500 requêtes par jour.
 
         try {
             $response = $client->get($url, [
                 'query' => [
                     'q' => $location,
-                    'key' => '39195082031d4014b230dcb3433133b3', // Remplace par ta clé API
-                    'limit' => 1
+                    'key' => '39195082031d4014b230dcb3433133b3', //  clé API OpenCage
+                    'countrycode' => 'SN', // Code pays pour restreindre la recherche au Sénégal
+                    'limit' => 1 // Limite le nombre de résultats
                 ]
             ]);
 
@@ -455,7 +457,8 @@ public function getAllPublications(Request $request)
                 'longitude' => $data['results'][0]['geometry']['lng'] ?? null
             ];
 
-            Cache::put($cacheKey, $coordinates, 86400);
+            // Mettre les coordonnées dans le cache pour une durée de 48 heures
+            Cache::put($cacheKey, $coordinates, 172800);
 
             return $coordinates;
         } catch (\Exception $e) {
@@ -466,6 +469,83 @@ public function getAllPublications(Request $request)
             ];
         }
     }
+
+//     public function getCoordinates($location)
+// {
+//     $cacheKey = 'coordinates_' . $location;
+//     if (Cache::has($cacheKey)) {
+//         return Cache::get($cacheKey);
+//     }
+
+//     $client = new Client();
+//     $url = 'https://us1.locationiq.com/v1/search.php'; // Limites gratuites : Jusqu'à 5 000 requêtes gratuites par jour.
+
+//     try {
+//         $response = $client->get($url, [
+//             'query' => [
+//                 'key' => 'pk.5c10c9c439934952e54b7cc9a53a5474', // Remplace par ta clé API
+//                 'q' => $location,
+//                 'format' => 'json',
+//                 'limit' => 1
+//             ]
+//         ]);
+
+//         $data = json_decode($response->getBody(), true);
+
+//         $coordinates = [
+//             'latitude' => $data[0]['lat'] ?? null,
+//             'longitude' => $data[0]['lon'] ?? null
+//         ];
+
+//         Cache::put($cacheKey, $coordinates, 86400);
+
+//         return $coordinates;
+//     } catch (\Exception $e) {
+//         return [
+//             'latitude' => null,
+//             'longitude' => null,
+//             'error' => 'Erreur lors de la récupération des coordonnées.'
+//         ];
+//     }
+// }
+
+
+// public function getCoordinates($location)
+// {
+//     $cacheKey = 'coordinates_' . $location;
+//     if (Cache::has($cacheKey)) {
+//         return Cache::get($cacheKey);
+//     }
+
+//     $client = new Client();
+//     $url = 'https://geocode.search.hereapi.com/v1/geocode'; // Limites gratuites : 250 000 transactions par mois.
+
+//     try {
+//         $response = $client->get($url, [
+//             'query' => [
+//                 'q' => $location,
+//                 'apiKey' => 'MXUuNBUTEgr5l1rZSVFDxE5qvITOyi55mKgmRR0ZwA8' // Remplace par ta clé API
+//             ]
+//         ]);
+
+//         $data = json_decode($response->getBody(), true);
+
+//         $coordinates = [
+//             'latitude' => $data['items'][0]['position']['lat'] ?? null,
+//             'longitude' => $data['items'][0]['position']['lng'] ?? null
+//         ];
+
+//         Cache::put($cacheKey, $coordinates, 86400);
+
+//         return $coordinates;
+//     } catch (\Exception $e) {
+//         return [
+//             'latitude' => null,
+//             'longitude' => null,
+//             'error' => 'Erreur lors de la récupération des coordonnées.'
+//         ];
+//     }
+// }
 
 
     // Méthode pour récupérer les publications et leurs coordonnées
