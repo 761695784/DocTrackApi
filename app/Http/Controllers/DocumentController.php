@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use App\Events\NewNotificationEvent;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\StoreDocumentRequest;
@@ -430,38 +431,34 @@ public function getAllPublications(Request $request)
 
     public function getCoordinates($location)
     {
-        // Créer un client Guzzle pour faire une requête HTTP
+        $cacheKey = 'coordinates_' . $location;
+        if (Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
+        }
+
         $client = new Client();
-        $url = 'https://nominatim.openstreetmap.org/search';
+        $url = 'https://api.opencagedata.com/geocode/v1/json';
 
         try {
-            // Faire une requête GET à Nominatim
             $response = $client->get($url, [
                 'query' => [
-                    'q' => $location, // Le lieu dont tu veux obtenir les coordonnées
-                    'format' => 'json', // Format de la réponse
-                    'limit' => 1 // Limiter à un seul résultat
+                    'q' => $location,
+                    'key' => '39195082031d4014b230dcb3433133b3', // Remplace par ta clé API
+                    'limit' => 1
                 ]
             ]);
 
-            // Décoder la réponse JSON
             $data = json_decode($response->getBody(), true);
 
-            // Vérifier si les données existent
-            if (isset($data[0])) {
-                return [
-                    'latitude' => $data[0]['lat'],
-                    'longitude' => $data[0]['lon']
-                ];
-            }
-
-            // Si aucune coordonnée n'a été trouvée
-            return [
-                'latitude' => null,
-                'longitude' => null
+            $coordinates = [
+                'latitude' => $data['results'][0]['geometry']['lat'] ?? null,
+                'longitude' => $data['results'][0]['geometry']['lng'] ?? null
             ];
+
+            Cache::put($cacheKey, $coordinates, 86400);
+
+            return $coordinates;
         } catch (\Exception $e) {
-            // Gérer les erreurs
             return [
                 'latitude' => null,
                 'longitude' => null,
@@ -470,27 +467,36 @@ public function getAllPublications(Request $request)
         }
     }
 
+
     // Méthode pour récupérer les publications et leurs coordonnées
     public function getPublicationsByLocation()
     {
-        $publications = Document::select('Location', DB::raw('COUNT(*) as publications'))
-                        ->groupBy('Location')
-                        ->get();
+        $localities = Document::distinct()->pluck('Location');
 
-        $regions = $publications->map(function($publication) {
-            // Utiliser la fonction getCoordinates pour obtenir les lat/long du lieu
-            $coords = $this->getCoordinates($publication->Location);
+        $regions = $localities->map(function($location) {
+            // Vérifie ou génère les coordonnées
+            $coords = $this->getCoordinates($location);
 
             return [
-                'name' => $publication->Location,
+                'name' => $location,
                 'latitude' => $coords['latitude'],
                 'longitude' => $coords['longitude'],
-                'publications' => $publication->publications
             ];
+        });
+
+        $publications = Document::select('Location', DB::raw('COUNT(*) as publications'))
+                        ->groupBy('Location')
+                        ->get()
+                        ->keyBy('Location');
+
+        $regions = $regions->map(function($region) use ($publications) {
+            $region['publications'] = $publications[$region['name']]->publications ?? 0;
+            return $region;
         });
 
         return response()->json($regions);
     }
+
 
 
 }
