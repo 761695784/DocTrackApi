@@ -230,7 +230,15 @@ public function deleteUser($id)
         ], 404);
     }
 
-    // Supprimer l'utilisateur
+    // Vérifier que l'utilisateur a le rôle 'SimpleUser'
+    if ($user->hasRole('Admin')) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Vous ne pouvez pas supprimer un autre administrateur.'
+        ], 403);
+    }
+
+    // Supprimer l'utilisateur s'il a le rôle 'SimpleUser'
     $user->delete();
 
     return response()->json([
@@ -238,6 +246,7 @@ public function deleteUser($id)
         'message' => 'Utilisateur supprimé avec succès.'
     ], 200);
 }
+
 
 /**
  * Methode pour la creation d'un admin

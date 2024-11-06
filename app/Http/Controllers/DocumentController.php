@@ -334,6 +334,72 @@ public function getAllPublications(Request $request)
         return response()->json($documents);
     }
 
+    // Fonction pour obtenir uniquement les documents supprimés
+    public function getDeletedDocuments()
+    {
+        $user = Auth::user(); // Récupérer l'utilisateur authentifié
+
+        // Vérifier si l'utilisateur est un admin
+        if (!$user || !$user->hasRole('Admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Accès refusé. Vous devez être un administrateur pour effectuer cette action.'
+            ], 403);
+        }
+
+        // Récupérer uniquement les documents supprimés (soft deleted)
+        $documents = Document::onlyTrashed()->with(['user', 'documentType'])->get();
+
+        return response()->json($documents);
+    }
+
+    // Fonction pour obtenir les documents dont le statut est "récupéré"
+    public function getRecoveredDocuments()
+    {
+        $user = Auth::user(); // Récupérer l'utilisateur authentifié
+
+        // Vérifier si l'utilisateur est un admin
+        if (!$user || !$user->hasRole('Admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Accès refusé. Vous devez être un administrateur pour effectuer cette action.'
+            ], 403);
+        }
+
+        // Récupérer les documents dont le statut est "récupéré", y compris ceux qui sont soft-deleted
+        $documents = Document::withTrashed()
+            ->where('statut', 'récupéré')
+            ->with(['user', 'documentType'])
+            ->get();
+
+        return response()->json($documents);
+    }
+
+
+   // Fonction pour obtenir les documents dont le statut est "non récupéré"
+    public function getNotRecoveredDocuments()
+    {
+        $user = Auth::user(); // Récupérer l'utilisateur authentifié
+
+        // Vérifier si l'utilisateur est un admin
+        if (!$user || !$user->hasRole('Admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Accès refusé. Vous devez être un administrateur pour effectuer cette action.'
+            ], 403);
+        }
+
+        // Récupérer les documents dont le statut est "non récupéré", y compris ceux qui sont soft-deleted
+        $documents = Document::withTrashed()
+            ->where('statut', 'non récupéré')
+            ->with(['user', 'documentType'])
+            ->get();
+
+        return response()->json($documents);
+    }
+
+
+
     public function getPublicationsByType()
     {
         $publications = Document::select('document_type_id', DB::raw('count(*) as count'))

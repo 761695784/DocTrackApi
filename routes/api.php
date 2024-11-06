@@ -52,6 +52,9 @@ Route::middleware('auth:api')->group(function () {
     Route::get('mail', [DocumentController::class, 'getEmailActivity']);
     Route::get('stat', [DocumentController::class, 'getStatistics']);
     Route::get('status-count', [DocumentController::class,'getDocumentStatusCountWithTrashed']);
+    Route::get('supp', [DocumentController::class,'getDeletedDocuments']);
+    Route::get('recup', [DocumentController::class,'getRecoveredDocuments']);
+    Route::get('nonrecup', [DocumentController::class,'getNotRecoveredDocuments']);
 
 
 });
