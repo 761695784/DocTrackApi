@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Events\NewNotificationEvent;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Traits\HasRoles;
@@ -92,7 +93,6 @@ public function getAllPublications(Request $request)
             // Génère l'URL accessible publiquement pour l'image
             $document->image = Storage::url($path);
         } else {
-            // Optionnel : enregistrer une erreur ou gérer le cas où aucun fichier valide n'est fourni
             return response()->json(['error' => 'Aucun fichier image valide fourni'], 400);
         }
 
@@ -102,42 +102,48 @@ public function getAllPublications(Request $request)
         // Notifier l'admin d'un nouveau document publié
         Notification::create([
             'message' => 'Un nouveau document a été publié : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
-            // 'document_id' => $document->id,
-            'is_read' => false, // Nouveau champ pour suivre l'état de lecture
+            'is_read' => false,
         ]);
 
         // Recherche des déclarations de perte correspondantes (insensible à la casse)
-        $declarations = DeclarationDePerte::whereRaw('LOWER(FirstNameIndoc) = ?', [strtolower($document->OwnerFirstName)])
-            ->whereRaw('LOWER(LastNameIndoc) = ?', [strtolower($document->OwnerLastName)])
+        $declarations = DeclarationDePerte::whereRaw('LOWER(FirstNameInDoc) = ?', [strtolower($document->OwnerFirstName)])
+            ->whereRaw('LOWER(LastNameInDoc) = ?', [strtolower($document->OwnerLastName)])
             ->get();
 
         foreach ($declarations as $declaration) {
             $user = $declaration->user; // Récupérer l'utilisateur qui a fait la déclaration
-            $Phone = $document->user->Phone; // Récupérer le numéro de téléphone du propriétaire du document
-            $documentUrl = $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id; // Générer l'URL pour afficher le document
+            $phone = $user->phone; // Assurez-vous que le champ `phone` est correct et existe
+            $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id; // URL pour afficher le document
 
             try {
                 // Envoi de l'email
-                Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
+                Mail::to($user->email)->send(new DocumentPublishedNotification($document, $phone, $documentUrl));
 
-                // Enregistrer un log d'email dans la table email_logs
+                // Envoi du SMS
+                $phoneNumber = $user->phone; // Numéro de téléphone de l'utilisateur déclarant
+                $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id;
+                $message = 'Un document correspondant à votre déclaration de perte a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
+                $this->sendSMS($phoneNumber, $message); // Appel à la méthode pour l'envoi de SMS
+
+                
+                // Log de l'email
                 \App\Models\EmailLog::create([
                     'from' => config('mail.from.address'),
                     'to' => $user->email,
                     'subject' => 'Correspondance à votre déclaration de perte',
                     'body' => 'Le document publié correspondant aux informations : ' .
                               $document->OwnerFirstName . ' ' . $document->OwnerLastName .
-                              ' avec le numéro du publicateur : ' . $Phone,
+                              ' avec le numéro du publicateur : ' . $phone,
                     'publisher_user_id' => $document->user->id,
                     'requester_user_id' => $user->id,
                     'document_id' => $document->id,
                     'declarant_user_id' => $user->id,
                 ]);
 
-                Log::info('Email log enregistré avec succès pour l\'utilisateur ' . $user->email);
+                Log::info('Email et SMS envoyés avec succès à ' . $user->email);
 
             } catch (\Exception $e) {
-                Log::error('Erreur lors de l\'envoi ou de l\'enregistrement de l\'email log : ' . $e->getMessage(), [
+                Log::error('Erreur lors de l\'envoi de la notification : ' . $e->getMessage(), [
                     'publisher_user_id' => $document->user->id,
                     'requester_user_id' => $user->id,
                     'document_id' => $document->id,
@@ -145,31 +151,64 @@ public function getAllPublications(Request $request)
                 ]);
             }
 
-                // Instance du service SMS
-            $smsService = new OrangeSMSService();
-
-            foreach ($declarations as $declaration) {
-                $user = $declaration->user;
-                $Phone = $user->phone; // Assurez-vous que le champ 'phone' est présent et contient le numéro correct
-
-                // Envoi du SMS
-                $smsMessage = "Bonjour, un document correspondant à votre déclaration de perte a été trouvé : " . $document->OwnerFirstName . " " . $document->OwnerLastName . ". Consultez l'application pour plus de détails.";
-                $smsService->sendSMS($Phone, $smsMessage);
-            }
             // Enregistrer une notification pour l'utilisateur
             Notification::create([
                 'message' => 'Un document correspondant à une déclaration a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
-                // 'declaration_de_perte_id' => $declaration->id,
-                'is_read' => false, // Nouveau champ pour suivre l'état de lecture
+                'is_read' => false,
             ]);
         }
 
-        // Répondre avec le document créé
         return response()->json([
             'success' => true,
             'message' => 'Document créé avec succès.',
             'document' => $document
         ], 201);
+    }
+
+    // Méthode pour envoyer un SMS via l'API Orange
+    protected function sendSMS($phoneNumber, $message)
+    {
+        $clientId = '9BE3qqA39CAlpBGOJAG0zNx5B5hFGKiT'; // Remplacez par votre ID client
+        $clientSecret = 'gQEDwQ4fAo0YyNgA'; // Remplacez par votre secret client
+        $accessToken = $this->getAccessToken($clientId, $clientSecret);
+
+        $url = 'https://api.orange.com/smsmessaging/v1/outbound/tel%3A%2B' . urlencode('+221778128426') . '/requests';
+
+        $data = [
+            'outboundSMSMessageRequest' => [
+                'address' => 'tel:+221' . $phoneNumber, // Format international
+                'senderAddress' => 'tel:+221778128426',
+                'outboundSMSTextMessage' => [
+                    'message' => $message
+                ]
+            ]
+        ];
+
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $accessToken,
+            'Content-Type' => 'application/json'
+        ])->post($url, $data);
+
+        if ($response->failed()) {
+            Log::error('Erreur lors de l\'envoi du SMS : ' . $response->body());
+        }
+    }
+
+    // Méthode pour obtenir un jeton d'accès
+    protected function getAccessToken($clientId, $clientSecret)
+    {
+        $response = Http::withBasicAuth($clientId, $clientSecret)
+            ->asForm()
+            ->post('https://api.orange.com/oauth/v2/token', [
+                'grant_type' => 'client_credentials'
+            ]);
+
+        if ($response->successful()) {
+            return $response->json()['access_token'];
+        }
+
+        Log::error('Erreur lors de l\'obtention du jeton d\'accès : ' . $response->body());
+        throw new \Exception('Impossible d\'obtenir le jeton d\'accès');
     }
 
             /**

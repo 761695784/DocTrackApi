@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\DeclarationDePerte;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Spatie\Permission\Traits\HasRoles;
 use App\Mail\DocumentPublishedNotification;
@@ -19,50 +20,57 @@ class DeclarationDePerteController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Vous devez être authentifié pour effectuer cette action.'
-            ], 401);
-        }
-
-        $validatedData = $request->validated();
-
-        $declaration = DeclarationDePerte::create([
-            'Title' => $validatedData['Title'],
-            'FirstNameInDoc' => $validatedData['FirstNameInDoc'],
-            'LastNameInDoc' => $validatedData['LastNameInDoc'],
-            'DocIdentification' => $validatedData['DocIdentification'] ?? null,
-            'document_type_id' => $validatedData['document_type_id'],
-            'user_id' => $user->id,
-        ]);
-
-            // Création d'une notification
-            Notification::create([
-                'message' => 'Nouvelle déclaration de perte créée : ' . $declaration->Title .' ',$declaration->FirstNameInDoc . ' ' . $declaration->LastNameInDoc,
-                // 'declaration_de_perte_id' => $declaration->id,
-                'is_read' => false,
-            ]);
-
-
-        $matchingDocuments = Document::where('document_type_id', $validatedData['document_type_id'])
-            ->whereRaw('LOWER(OwnerFirstName) = LOWER(?)', [$validatedData['FirstNameInDoc']])
-            ->whereRaw('LOWER(OwnerLastName) = LOWER(?)', [$validatedData['LastNameInDoc']])
-            ->get();
-
-        foreach ($matchingDocuments as $document) {
-            try {
-                $this->sendNotificationEmail($user, $document);
-            } catch (\Exception $e) {
-                Log::error('Erreur lors de l\'envoi de la notification : ' . $e->getMessage());
-            }
-        }
-
+    if (!$user) {
         return response()->json([
-            'success' => true,
-            'message' => 'Déclaration de perte créée avec succès.',
-            'data' => $declaration
-        ], 201);
+            'success' => false,
+            'message' => 'Vous devez être authentifié pour effectuer cette action.'
+        ], 401);
+    }
+
+    $validatedData = $request->validated();
+
+    $declaration = DeclarationDePerte::create([
+        'Title' => $validatedData['Title'],
+        'FirstNameInDoc' => $validatedData['FirstNameInDoc'],
+        'LastNameInDoc' => $validatedData['LastNameInDoc'],
+        'DocIdentification' => $validatedData['DocIdentification'] ?? null,
+        'document_type_id' => $validatedData['document_type_id'],
+        'user_id' => $user->id,
+    ]);
+
+    // Création d'une notification
+    Notification::create([
+        'message' => 'Nouvelle déclaration de perte créée : ' . $declaration->Title . ' ' . $declaration->FirstNameInDoc . ' ' . $declaration->LastNameInDoc,
+        'is_read' => false,
+    ]);
+
+    $matchingDocuments = Document::where('document_type_id', $validatedData['document_type_id'])
+        ->whereRaw('LOWER(OwnerFirstName) = LOWER(?)', [$validatedData['FirstNameInDoc']])
+        ->whereRaw('LOWER(OwnerLastName) = LOWER(?)', [$validatedData['LastNameInDoc']])
+        ->get();
+
+    foreach ($matchingDocuments as $document) {
+        try {
+            // Envoi de l'email
+            $this->sendNotificationEmail($user, $document);
+
+            // Envoi du SMS
+            $phoneNumber = $user->phone; // Numéro de téléphone de l'utilisateur déclarant
+            $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id;
+            $message = 'Un document correspondant à votre déclaration de perte a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
+
+            $this->sendSMS($phoneNumber, $message); // Appel à la méthode pour l'envoi de SMS
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de l\'envoi de la notification ou du SMS : ' . $e->getMessage());
+        }
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Déclaration de perte créée avec succès.',
+        'data' => $declaration
+    ], 201);
     }
 
     private function sendNotificationEmail($user, $document)
@@ -99,6 +107,52 @@ class DeclarationDePerteController extends Controller
             ]);
         }
     }
+
+    // Méthode pour envoyer un SMS via l'API Orange
+protected function sendSMS($phoneNumber, $message)
+{
+    $clientId = '9BE3qqA39CAlpBGOJAG0zNx5B5hFGKiT'; // Remplacez par votre ID client
+    $clientSecret = 'gQEDwQ4fAo0YyNgA'; // Remplacez par votre secret client
+    $accessToken = $this->getAccessToken($clientId, $clientSecret);
+
+    $url = 'https://api.orange.com/smsmessaging/v1/outbound/tel%3A%2B' . urlencode('+221778128426') . '/requests';
+
+    $data = [
+        'outboundSMSMessageRequest' => [
+            'address' => 'tel:+221' . $phoneNumber, // Format international
+            'senderAddress' => 'tel:+221778128426',
+            'outboundSMSTextMessage' => [
+                'message' => $message
+            ]
+        ]
+    ];
+
+    $response = Http::withHeaders([
+        'Authorization' => 'Bearer ' . $accessToken,
+        'Content-Type' => 'application/json'
+    ])->post($url, $data);
+
+    if ($response->failed()) {
+        Log::error('Erreur lors de l\'envoi du SMS : ' . $response->body());
+    }
+}
+
+// Méthode pour obtenir un jeton d'accès
+protected function getAccessToken($clientId, $clientSecret)
+{
+    $response = Http::withBasicAuth($clientId, $clientSecret)
+        ->asForm()
+        ->post('https://api.orange.com/oauth/v2/token', [
+            'grant_type' => 'client_credentials'
+        ]);
+
+    if ($response->successful()) {
+        return $response->json()['access_token'];
+    }
+
+    Log::error('Erreur lors de l\'obtention du jeton d\'accès : ' . $response->body());
+    throw new \Exception('Impossible d\'obtenir le jeton d\'accès');
+}
 
 
 
