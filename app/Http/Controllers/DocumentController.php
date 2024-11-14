@@ -9,6 +9,7 @@ use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use App\Models\DeclarationDePerte;
+use App\Services\OrangeSMSService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Events\NewNotificationEvent;
@@ -142,6 +143,18 @@ public function getAllPublications(Request $request)
                     'document_id' => $document->id,
                     'declarant_user_id' => $user->id,
                 ]);
+            }
+
+                // Instance du service SMS
+            $smsService = new OrangeSMSService();
+
+            foreach ($declarations as $declaration) {
+                $user = $declaration->user;
+                $Phone = $user->phone; // Assurez-vous que le champ 'phone' est présent et contient le numéro correct
+
+                // Envoi du SMS
+                $smsMessage = "Bonjour, un document correspondant à votre déclaration de perte a été trouvé : " . $document->OwnerFirstName . " " . $document->OwnerLastName . ". Consultez l'application pour plus de détails.";
+                $smsService->sendSMS($Phone, $smsMessage);
             }
             // Enregistrer une notification pour l'utilisateur
             Notification::create([

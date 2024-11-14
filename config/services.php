@@ -31,4 +31,12 @@ return [
         ],
     ],
 
+    'orange_sms' => [
+    'client_id' => env('ORANGE_SMS_CLIENT_ID'),
+    'client_secret' => env('ORANGE_SMS_CLIENT_SECRET'),
+    'sender' => env('ORANGE_SMS_SENDER'),
+    'api_url' => 'https://api.orange.com/smsmessaging/v1/outbound/tel%3A%2B' . env('ORANGE_SMS_SENDER') . '/requests',
+    ],
+
+
 ];

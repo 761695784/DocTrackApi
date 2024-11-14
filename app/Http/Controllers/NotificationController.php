@@ -34,7 +34,10 @@ class NotificationController extends Controller
         $notification->is_read = true;
         $notification->save();
 
-        return response()->json(['message' => 'Notification marked as read.']);
+        // Supprimez la notification de la base de données
+        $notification->delete();
+
+        return response()->json(['message' => 'Notification marked as read and deleted.']);
     }
 
      public function showAllEmails()
