@@ -57,6 +57,7 @@ class DeclarationDePerteController extends Controller
             // Envoi du SMS
             $phoneNumber = $user->phone; // Numéro de téléphone de l'utilisateur déclarant
             $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id;
+
             $message = 'Un document correspondant à votre déclaration de perte a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
 
             $this->sendSMS($phoneNumber, $message); // Appel à la méthode pour l'envoi de SMS

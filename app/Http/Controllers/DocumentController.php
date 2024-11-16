@@ -119,13 +119,12 @@ public function getAllPublications(Request $request)
                 // Envoi de l'email
                 Mail::to($user->email)->send(new DocumentPublishedNotification($document, $phone, $documentUrl));
 
-                // Envoi du SMS
-                $phoneNumber = $user->phone; // Numéro de téléphone de l'utilisateur déclarant
-                $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id;
-                $message = 'Un document correspondant à votre déclaration de perte a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
-                $this->sendSMS($phoneNumber, $message); // Appel à la méthode pour l'envoi de SMS
+                        // Envoi du SMS
+                        $phoneNumber = $user->phone; // Numéro de téléphone de l'utilisateur déclarant
+                        $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id;
+                        $message = 'Un document correspondant à votre déclaration de perte a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
 
-                
+                        $this->sendSMS($phoneNumber, $message); // Appel à la méthode pour l'envoi de SMS
                 // Log de l'email
                 \App\Models\EmailLog::create([
                     'from' => config('mail.from.address'),
