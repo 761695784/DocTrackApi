@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
@@ -350,6 +351,51 @@ public function updateProfile(Request $request)
     ], 200);
 }
 
+
+ /**
+     * Envoyer un lien de réinitialisation de mot de passe
+     */
+    public function forgotPassword(Request $request)
+    {
+        // Validation des données
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+        ]);
+
+        // Envoi du lien de réinitialisation
+        $status = Password::sendResetLink($request->only('email'));
+
+        return $status === Password::RESET_LINK_SENT
+            ? response()->json(['success' => true, 'message' => __($status)], 200)
+            : response()->json(['success' => false, 'message' => __($status)], 400);
+    }
+
+    /**
+     * Réinitialiser le mot de passe
+     */
+    public function resetPassword(Request $request)
+    {
+        // Validation des données
+        $request->validate([
+            'token' => 'required',
+            'email' => 'required|email|exists:users,email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        // Réinitialisation du mot de passe
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password),
+                ])->save();
+            }
+        );
+
+        return $status === Password::PASSWORD_RESET
+            ? response()->json(['success' => true, 'message' => __($status)], 200)
+            : response()->json(['success' => false, 'message' => __($status)], 400);
+    }
 
 }
 

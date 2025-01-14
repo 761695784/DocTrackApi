@@ -9,6 +9,7 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use App\Notifications\ResetPassword;
 
 class User extends Authenticatable  implements JWTSubject
 {
@@ -65,5 +66,10 @@ class User extends Authenticatable  implements JWTSubject
    public function commentaires(){
      return $this->hasMany(Commentaire::class);
    }
+
+   public function sendPasswordResetNotification($token)
+{
+    $this->notify(new ResetPassword($token));
+}
 
 }

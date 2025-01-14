@@ -24,6 +24,11 @@ Route::put('change-password', [AuthController::class, 'changePassword'])->middle
 Route::delete('users/{id}', [AuthController::class, 'deleteUser'])->middleware('auth:api');
 Route::post('create-admin', [AuthController::class, 'createAdmin'])->middleware('auth:api');
 Route::put('profil', [AuthController::class, 'updateProfile'])->middleware('auth:api');
+Route::get('forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('reset-password', [AuthController::class, 'resetPassword']);
+Route::get('reset-password/{token}', function ($token) {
+    return view('auth.reset-password', ['token' => $token]);
+})->middleware('guest')->name('password.reset');
 
 
 Route::middleware('auth:api')->group(function () {
