@@ -32,15 +32,14 @@ class ResetPassword extends Notification
      */
     public function toMail($notifiable)
     {
-        $url = url(route('password.reset', [
-            'token' => $this->token,
-            'email' => $notifiable->getEmailForPasswordReset(),
-        ], false));
+        // Générer l'URL de redirection vers le frontend
+        $frontendUrl = "http://localhost:4200/newpass?token={$this->token}&email=" . urlencode($notifiable->getEmailForPasswordReset());
 
         return (new MailMessage)
-        ->subject(Lang::get('Notification de réinitialisation de mot de passe'))
-        ->line(Lang::get('Vous recevez cet email car nous avons reçu une demande de réinitialisation de mot de passe pour votre compte.'))
-        ->action(Lang::get('Réinitialiser le mot de passe'), $url)
-        ->line(Lang::get('Si vous n\'avez pas demandé de réinitialisation de mot de passe, aucune autre action n\'est requise.'));
+            ->subject(Lang::get('Notification de réinitialisation de mot de passe'))
+            ->line(Lang::get('Vous recevez cet email car nous avons reçu une demande de réinitialisation de mot de passe pour votre compte.'))
+            ->action(Lang::get('Réinitialiser le mot de passe'), $frontendUrl)
+            ->line(Lang::get('Si vous n\'avez pas demandé de réinitialisation de mot de passe, aucune autre action n\'est requise.'));
     }
+
 }
