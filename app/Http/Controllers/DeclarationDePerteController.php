@@ -110,51 +110,51 @@ class DeclarationDePerteController extends Controller
     }
 
     // Méthode pour envoyer un SMS via l'API Orange
-protected function sendSMS($phoneNumber, $message)
-{
-    $clientId = '9BE3qqA39CAlpBGOJAG0zNx5B5hFGKiT'; // Remplacez par votre ID client
-    $clientSecret = 'gQEDwQ4fAo0YyNgA'; // Remplacez par votre secret client
-    $accessToken = $this->getAccessToken($clientId, $clientSecret);
+    protected function sendSMS($phoneNumber, $message)
+    {
+        $clientId = 'd9zZG8QXjlc1eevAJksdUaGYq1qgzIhx'; // Remplacez par votre ID client
+        $clientSecret = '1eRQoDQiKk5Tm03ZS0cHIkMzdriKDR3cp4yEJPypNFfw'; // Remplacez par votre secret client
+        $accessToken = $this->getAccessToken($clientId, $clientSecret);
 
-    $url = 'https://api.orange.com/smsmessaging/v1/outbound/tel%3A%2B' . urlencode('+221778128426') . '/requests';
+        $url = 'https://api.orange.com/smsmessaging/v1/outbound/tel%3A%2B' . urlencode('+221783549714') . '/requests';
 
-    $data = [
-        'outboundSMSMessageRequest' => [
-            'address' => 'tel:+221' . $phoneNumber, // Format international
-            'senderAddress' => 'tel:+221778128426',
-            'outboundSMSTextMessage' => [
-                'message' => $message
+        $data = [
+            'outboundSMSMessageRequest' => [
+                'address' => 'tel:+221' . $phoneNumber, // Format international
+                'senderAddress' => 'tel:+221783549714',
+                'senderName' => 'DocTrack',
+                'outboundSMSTextMessage' => [
+                    'message' => $message
+                ]
             ]
-        ]
-    ];
+        ];
 
-    $response = Http::withHeaders([
-        'Authorization' => 'Bearer ' . $accessToken,
-        'Content-Type' => 'application/json'
-    ])->post($url, $data);
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $accessToken,
+            'Content-Type' => 'application/json'
+        ])->post($url, $data);
 
-    if ($response->failed()) {
-        Log::error('Erreur lors de l\'envoi du SMS : ' . $response->body());
-    }
-}
-
-// Méthode pour obtenir un jeton d'accès
-protected function getAccessToken($clientId, $clientSecret)
-{
-    $response = Http::withBasicAuth($clientId, $clientSecret)
-        ->asForm()
-        ->post('https://api.orange.com/oauth/v2/token', [
-            'grant_type' => 'client_credentials'
-        ]);
-
-    if ($response->successful()) {
-        return $response->json()['access_token'];
+        if ($response->failed()) {
+            Log::error('Erreur lors de l\'envoi du SMS : ' . $response->body());
+        }
     }
 
-    Log::error('Erreur lors de l\'obtention du jeton d\'accès : ' . $response->body());
-    throw new \Exception('Impossible d\'obtenir le jeton d\'accès');
-}
+    // Méthode pour obtenir un jeton d'accès
+    protected function getAccessToken($clientId, $clientSecret)
+    {
+        $response = Http::withBasicAuth($clientId, $clientSecret)
+            ->asForm()
+            ->post('https://api.orange.com/oauth/v2/token', [
+                'grant_type' => 'client_credentials'
+            ]);
 
+        if ($response->successful()) {
+            return $response->json()['access_token'];
+        }
+
+        Log::error('Erreur lors de l\'obtention du jeton d\'accès : ' . $response->body());
+        throw new \Exception('Impossible d\'obtenir le jeton d\'accès');
+    }
 
 
      /**

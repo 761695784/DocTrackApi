@@ -167,16 +167,17 @@ public function getAllPublications(Request $request)
     // Méthode pour envoyer un SMS via l'API Orange
     protected function sendSMS($phoneNumber, $message)
     {
-        $clientId = '9BE3qqA39CAlpBGOJAG0zNx5B5hFGKiT'; // Remplacez par votre ID client
-        $clientSecret = 'gQEDwQ4fAo0YyNgA'; // Remplacez par votre secret client
+        $clientId = 'd9zZG8QXjlc1eevAJksdUaGYq1qgzIhx'; // Remplacez par votre ID client
+        $clientSecret = '1eRQoDQiKk5Tm03ZS0cHIkMzdriKDR3cp4yEJPypNFfw'; // Remplacez par votre secret client
         $accessToken = $this->getAccessToken($clientId, $clientSecret);
 
-        $url = 'https://api.orange.com/smsmessaging/v1/outbound/tel%3A%2B' . urlencode('+221778128426') . '/requests';
+        $url = 'https://api.orange.com/smsmessaging/v1/outbound/tel%3A%2B' . urlencode('+221783549714') . '/requests';
 
         $data = [
             'outboundSMSMessageRequest' => [
                 'address' => 'tel:+221' . $phoneNumber, // Format international
-                'senderAddress' => 'tel:+221778128426',
+                'senderAddress' => 'tel:+221783549714',
+                'senderName' => 'DocTrack',
                 'outboundSMSTextMessage' => [
                     'message' => $message
                 ]
@@ -209,6 +210,49 @@ public function getAllPublications(Request $request)
         Log::error('Erreur lors de l\'obtention du jeton d\'accès : ' . $response->body());
         throw new \Exception('Impossible d\'obtenir le jeton d\'accès');
     }
+
+        /**
+     * Gérer la demande de restitution.
+     */
+    public function requestRestitution($documentId)
+    {
+        // Récupérer le document concerné
+        $document = Document::findOrFail($documentId);
+
+        // L'utilisateur connecté qui clique sur "Restituer"
+        $fromUser = Auth::user();
+
+        // Vérifier si l'utilisateur connecté est le propriétaire du document
+        if ($fromUser->id === $document->user_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous ne pouvez pas demander la restitution de votre propre document.'
+            ], 403); // Code 403 Forbidden
+        }
+
+        // Vérifier si une demande de restitution pour ce document a déjà été faite par cet utilisateur
+        $existingEmailLog = EmailLog::where('requester_user_id', $fromUser->id)
+            ->where('document_id', $documentId)
+            ->whereNotNull('publisher_user_id') // S'assurer qu'il s'agit bien d'une demande de restitution
+            ->first();
+
+        if ($existingEmailLog) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous avez déjà demandé la restitution de ce document.'
+            ], 400); // Code 400 Bad Request
+        }
+
+        // L'utilisateur qui a publié le document
+        $toUser = $document->user;
+
+        // Envoyer la notification par email
+        $toUser->notify(new RestitutionRequestNotification($fromUser, $document));
+
+        // Retourner une réponse JSON
+        return response()->json(['message' => 'Demande de restitution envoyée avec succès.']);
+    }
+
 
             /**
      * Display the specified resource.
@@ -330,51 +374,6 @@ public function getAllPublications(Request $request)
             'data' => $documents
         ]);
     }
-
-
-
-    /**
-     * Gérer la demande de restitution.
-     */
-    public function requestRestitution($documentId)
-    {
-        // Récupérer le document concerné
-        $document = Document::findOrFail($documentId);
-
-        // L'utilisateur connecté qui clique sur "Restituer"
-        $fromUser = Auth::user();
-
-        // Vérifier si l'utilisateur connecté est le propriétaire du document
-        if ($fromUser->id === $document->user_id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Vous ne pouvez pas demander la restitution de votre propre document.'
-            ], 403); // Code 403 Forbidden
-        }
-
-        // Vérifier si une demande de restitution pour ce document a déjà été faite par cet utilisateur
-        $existingEmailLog = EmailLog::where('requester_user_id', $fromUser->id)
-            ->where('document_id', $documentId)
-            ->whereNotNull('publisher_user_id') // S'assurer qu'il s'agit bien d'une demande de restitution
-            ->first();
-
-        if ($existingEmailLog) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Vous avez déjà demandé la restitution de ce document.'
-            ], 400); // Code 400 Bad Request
-        }
-
-        // L'utilisateur qui a publié le document
-        $toUser = $document->user;
-
-        // Envoyer la notification par email
-        $toUser->notify(new RestitutionRequestNotification($fromUser, $document));
-
-        // Retourner une réponse JSON
-        return response()->json(['message' => 'Demande de restitution envoyée avec succès.']);
-    }
-
 
     public function OwnPub()
     {
