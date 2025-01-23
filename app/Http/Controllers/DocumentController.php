@@ -112,7 +112,7 @@ public function getAllPublications(Request $request)
 
         foreach ($declarations as $declaration) {
             $user = $declaration->user; // Récupérer l'utilisateur qui a fait la déclaration
-            $phone = $user->phone; // Assurez-vous que le champ `phone` est correct et existe
+            $phone = $user->Phone; // Assurez-vous que le champ `phone` est correct et existe
             $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id; // URL pour afficher le document
 
             try {
@@ -120,7 +120,7 @@ public function getAllPublications(Request $request)
                 Mail::to($user->email)->send(new DocumentPublishedNotification($document, $phone, $documentUrl));
 
                         // Envoi du SMS
-                        $phoneNumber = $user->phone; // Numéro de téléphone de l'utilisateur déclarant
+                        $phoneNumber = $user->Phone; // Numéro de téléphone de l'utilisateur déclarant
                         $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id;
                         $message = 'Un document correspondant à votre déclaration de perte a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
 
@@ -164,90 +164,145 @@ public function getAllPublications(Request $request)
         ], 201);
     }
 
-    // // Méthode pour envoyer un SMS via l'API Orange
-    // protected function sendSMS($phoneNumber, $message)
-    // {
-    //     $clientId = 'd9zZG8QXjlc1eevAJksdUaGYq1qgzIhx'; // Remplacez par votre ID client
-    //     $clientSecret = '1eRQoDQiKk5Tm03ZS0cHIkMzdriKDR3cp4yEJPypNFfw'; // Remplacez par votre secret client
-    //     $accessToken = $this->getAccessToken($clientId, $clientSecret);
+     // Méthode pour envoyer un SMS via l'API Orange
+    protected function sendSMS($phoneNumber, $message)
+    {
+        // Log du numéro de téléphone avant nettoyage
+        Log::info('Numéro de téléphone avant nettoyage : ' . $phoneNumber);
 
-    //     $url = 'https://api.orange.com/smsmessaging/v1/outbound/tel%3A%2B' . urlencode('+221783549714') . '/requests';
+        // Nettoyer le numéro de téléphone
+        $phoneNumber = str_replace('+221', '', $phoneNumber); // Supprime '+221' du numéro
+        $phoneNumber = '221' . $phoneNumber; // Ajoute l'indicatif Sénégal
 
-    //     $data = [
-    //         'outboundSMSMessageRequest' => [
-    //             'address' => 'tel:+221' . $phoneNumber, // Format international
-    //             'senderAddress' => 'tel:+221783549714',
-    //             'senderName' => 'DocTrack',
-    //             'outboundSMSTextMessage' => [
-    //                 'message' => $message
-    //             ]
-    //         ]
-    //     ];
+        // Log du numéro de téléphone après nettoyage
+        Log::info('Numéro de téléphone après nettoyage : ' . $phoneNumber);
 
-    //     $response = Http::withHeaders([
-    //         'Authorization' => 'Bearer ' . $accessToken,
-    //         'Content-Type' => 'application/json'
-    //     ])->post($url, $data);
+        // Vérifier la longueur du numéro
+        if (strlen($phoneNumber) < 12) { // 221 + 9 chiffres = 12 caractères
+            Log::error('Numéro de téléphone invalide : ' . $phoneNumber);
+            return;
+        }
 
-    //     if ($response->failed()) {
-    //         Log::error('Erreur lors de l\'envoi du SMS : ' . $response->body());
-    //     }
-    // }
+        // Récupérer les identifiants depuis la configuration
+        $clientId = config('services.orange.client_id');
+        $clientSecret = config('services.orange.client_secret');
 
-    // Méthode pour envoyer un SMS via l'API Orange
-protected function sendSMS($phoneNumber, $message)
-{
-    $clientId = 'd9zZG8QXjlc1eevAJksdUaGYq1qgzIhx'; // Remplacez par votre ID client
-    $clientSecret = '1eRQoDQiKk5Tm03ZS0cHIkMzdriKDR3cp4yEJPypNFfw'; // Remplacez par votre secret client
-    $accessToken = $this->getAccessToken($clientId, $clientSecret);
+        // Vérifier que les identifiants sont bien définis
+        if (empty($clientId) || empty($clientSecret)) {
+            Log::error('Client ID ou Client Secret non défini.');
+            return;
+        }
 
-    // L'adresse de l'expéditeur au format international
-    $senderAddress = 'tel:+221783549714'; // Remplacez par votre numéro
+        // Log des identifiants
+        Log::info('Client ID : ' . $clientId);
+        Log::info('Client Secret : ' . $clientSecret);
 
-    $url = 'http://api.orange.com/smsmessaging/v1/outbound/' . urlencode($senderAddress) . '/requests';
+        // Obtenir le token d'accès
+        $accessToken = $this->getAccessToken($clientId, $clientSecret);
 
-    $data = [
-        'outboundSMSMessageRequest' => [
-            'address' => 'tel:+221' . $phoneNumber, // Format international pour le destinataire
-            'outboundSMSTextMessage' => [
-                'message' => $message,
-            ],
-            'senderAddress' => $senderAddress,
-            'senderName' => 'DocTrack', // Nom de l'expéditeur
-        ]
-    ];
+        if (!$accessToken) {
+            Log::error('Erreur : Impossible de récupérer le token d\'accès.');
+            return;
+        }
 
-    // Envoi de la requête POST à l'API Orange
-    $response = Http::withHeaders([
-        'Authorization' => 'Bearer ' . $accessToken,
-        'Content-Type' => 'application/json',
-    ])->post($url, $data);
+        // Envoyer le SMS
+        $senderAddress = config('services.orange.sender_address');
 
-    // Vérification de la réponse
-    if ($response->successful()) {
-        Log::info('SMS envoyé avec succès à ' . $phoneNumber);
-    } else {
-        Log::error('Erreur lors de l\'envoi du SMS : ' . $response->body());
+        // Vérifier que le senderAddress commence par 'tel:'
+        if (strpos($senderAddress, 'tel:') !== 0) {
+            $senderAddress = 'tel:' . $senderAddress; // Ajouter le préfixe si absent
+        }
+
+        $url = 'https://api.orange.com/smsmessaging/v1/outbound/' . urlencode($senderAddress) . '/requests';
+
+        $data = [
+            'outboundSMSMessageRequest' => [
+                'address' => 'tel:+' . $phoneNumber,  // Format international complet
+                'outboundSMSTextMessage' => [
+                    'message' => $message,
+                ],
+                'senderAddress' => $senderAddress, // Utiliser le senderAddress formaté
+                'senderName' => "SMS 183786",
+            ]
+        ];
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $accessToken,
+            'Content-Type: application/json',
+            'Accept: application/json',
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+
+        $response = curl_exec($ch);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false) {
+            Log::error('Erreur lors de l\'envoi du SMS : ' . $error);
+            return;
+        }
+
+        $responseData = json_decode($response, true);
+        if (isset($responseData['outboundSMSMessageRequest'])) {
+            Log::info('SMS envoyé avec succès à ' . $phoneNumber);
+        } else {
+            Log::error('Erreur lors de l\'envoi du SMS : ' . $response);
+        }
     }
-}
 
-  // Méthode pour obtenir un jeton d'accès
-protected function getAccessToken($clientId, $clientSecret)
-{
-    $url = 'https://api.orange.com/oauth/v2/token';
-    $response = Http::withBasicAuth($clientId, $clientSecret)
-        ->asForm()
-        ->post($url, [
-            'grant_type' => 'client_credentials',
+    // Méthode pour obtenir un jeton d'accès
+    protected function getAccessToken($clientId, $clientSecret)
+    {
+        $url = 'https://api.orange.com/oauth/v3/token';
+
+        // Log des identifiants et de l'en-tête d'autorisation
+        Log::info('Tentative d\'obtention du token avec les identifiants :', [
+            'clientId' => $clientId,
+            'clientSecret' => $clientSecret,
+            'authorizationHeader' => 'Basic ' . base64_encode($clientId . ':' . $clientSecret),
         ]);
 
-    if ($response->successful()) {
-        return $response->json()['access_token'];
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Basic ' . base64_encode($clientId . ':' . $clientSecret),
+            'Content-Type: application/x-www-form-urlencoded',
+            'Accept: application/json',
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, 'grant_type=client_credentials');
+
+        $response = curl_exec($ch);
+        $error = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE); // Récupère le code HTTP
+        curl_close($ch);
+
+        // Log de la réponse
+        Log::info('Réponse de l\'API Orange :', [
+            'http_code' => $httpCode,
+            'response' => $response,
+            'error' => $error,
+        ]);
+
+        if ($response === false) {
+            Log::error('Erreur lors de l\'obtention du jeton d\'accès : ' . $error);
+            throw new \Exception('Erreur cURL : ' . $error);
+        }
+
+        $data = json_decode($response, true);
+        if (isset($data['access_token'])) {
+            return $data['access_token'];
+        }
+
+        Log::error('Erreur lors de l\'obtention du jeton d\'accès : ' . $response);
+        throw new \Exception('Impossible d\'obtenir le jeton d\'accès');
     }
 
-    Log::error('Erreur lors de l\'obtention du jeton d\'accès : ' . $response->body());
-    throw new \Exception('Impossible d\'obtenir le jeton d\'accès');
-}
         /**
      * Gérer la demande de restitution.
      */
@@ -286,10 +341,17 @@ protected function getAccessToken($clientId, $clientSecret)
         // Envoyer la notification par email
         $toUser->notify(new RestitutionRequestNotification($fromUser, $document));
 
+        // Envoyer la notification par SMS
+        $phoneNumber = $toUser->Phone; // Assure-toi que le champ du numéro de téléphone est correct
+        $documentUrl = 'https://sendoctrack.netlify.app/document/' . $documentId; // URL pour afficher le document
+        $smsMessage = 'Bonjour, vous avez une demande de restitution pour le document : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
+
+        // Appeler la méthode sendSMS
+        $this->sendSMS($phoneNumber, $smsMessage);
+
         // Retourner une réponse JSON
         return response()->json(['message' => 'Demande de restitution envoyée avec succès.']);
     }
-
 
             /**
      * Display the specified resource.
