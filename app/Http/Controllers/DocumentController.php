@@ -222,7 +222,8 @@ public function getAllPublications(Request $request)
                     'message' => $message,
                 ],
                 'senderAddress' => $senderAddress, // Utiliser le senderAddress formaté
-                'senderName' => "SMS 183786",
+                // 'senderName' => "SMS 183786",
+                'senderName' => "DocTrack",
             ]
         ];
 
