@@ -167,7 +167,8 @@ class DeclarationDePerteController extends Controller
                    'message' => $message,
                ],
                'senderAddress' => $senderAddress, // Utiliser le senderAddress formaté
-               'senderName' => "SMS 183786",
+               // 'senderName' => "SMS 183786",
+                  'senderName' => "DocTrack",
            ]
        ];
 
