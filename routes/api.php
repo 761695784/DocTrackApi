@@ -26,7 +26,7 @@ Route::put('change-password', [AuthController::class, 'changePassword'])->middle
 Route::delete('users/{id}', [AuthController::class, 'deleteUser'])->middleware('auth:api');
 Route::post('create-admin', [AuthController::class, 'createAdmin'])->middleware('auth:api');
 // Route pour finaliser la création d'un compte après Google Login
-Route::post('/finalize-account', [AuthController::class, 'finalizeAccountCreation']);
+Route::post('/finalize-account', [AuthController::class, 'finalizeAccountCreation'])->middleware('auth:api');
 Route::put('profil', [AuthController::class, 'updateProfile'])->middleware('auth:api');
 Route::get('forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('reset-password', [AuthController::class, 'resetPassword']);
