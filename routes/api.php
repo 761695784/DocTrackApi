@@ -3,12 +3,14 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Notifications\Notification;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\CommentaireController;
+use Illuminate\Session\Middleware\StartSession;
 use App\Http\Controllers\DocumentTypeController;
-use App\Http\Controllers\DeclarationDePerteController;
 use App\Http\Controllers\NotificationController;
-use Illuminate\Notifications\Notification;
+use App\Http\Controllers\DeclarationDePerteController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -67,6 +69,12 @@ Route::put('document/{id}', [DocumentController::class,'update'] );
 Route::get('lieu', [DocumentController::class,'getPublicationsByLocation']);
 
 
+// Redirection vers Google
+Route::middleware([StartSession::class])->group(function () {
+    // Tes routes API ici
+    Route::get('/auth/google', function () {
+        return Socialite::driver('google')->redirect();
+    });
 
-
-
+    Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
+});

@@ -38,5 +38,10 @@ return [
     'api_url' => 'https://api.orange.com/smsmessaging/v1/outbound/tel%3A%2B' . env('ORANGE_SENDER_ADDRESS') . '/requests',
     ],
 
+    'google' => [
+    'client_id' => env('GOOGLE_CLIENT_ID'),
+    'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+    'redirect' => env('GOOGLE_REDIRECT_URI'),
+],
 
 ];
