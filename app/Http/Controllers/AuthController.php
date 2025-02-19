@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -404,19 +405,30 @@ public function updateProfile(Request $request)
      */
     public function handleGoogleCallback(Request $request) {
         try {
-            // Récupérer les informations de l'utilisateur Google
-            $googleUser = Socialite::driver('google')->user();
+            // Récupérer le token envoyé par le front-end
+            $token = $request->input('token');
+            Log::info('Google Token reçu : ' . $token);
 
-            // Vérifier si l'utilisateur existe déjà dans la base de données
+            // Récupérer l'utilisateur Google à partir du token
+            $googleUser = Socialite::driver('google')->userFromToken($token);
+            Log::info('Utilisateur Google : ' . $googleUser->getName());
+
+            // Vérifier que les données essentielles sont présentes
+            if (!$googleUser || !$googleUser->email) {
+                throw new \Exception('Données utilisateur Google invalides');
+            }
+
+            // Chercher un utilisateur existant avec cet email
             $user = User::where('email', $googleUser->email)->first();
 
             if (!$user) {
-                // Retourner une réponse indiquant que l'adresse et le numéro de téléphone sont requis
+                // Si l'utilisateur n'existe pas, on renvoie une réponse indiquant
+                // que certaines informations complémentaires sont requises pour finaliser l'inscription.
                 return response()->json([
                     'success' => false,
                     'message' => 'Veuillez fournir votre adresse et votre numéro de téléphone pour finaliser la création du compte.',
                     'required_fields' => ['Adress', 'Phone'],
-                    'google_user' => [ // Optionnel : Envoyer les infos Google pour pré-remplir le formulaire
+                    'google_user' => [
                         'email' => $googleUser->email,
                         'first_name' => $googleUser->user['given_name'] ?? $googleUser->name,
                         'last_name' => $googleUser->user['family_name'] ?? '',
@@ -424,17 +436,18 @@ public function updateProfile(Request $request)
                 ], 400);
             }
 
-            // Si l'utilisateur existe déjà, générer un token JWT
-            $token = JWTAuth::fromUser($user);
+            // Si l'utilisateur existe déjà, générer un token JWT et le renvoyer
+            $jwtToken = JWTAuth::fromUser($user);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Connexion avec Google réussie !',
                 'user' => $user,
-                'token' => $token,
+                'token' => $jwtToken,
             ], 200);
 
         } catch (\Exception $e) {
+            Log::error('Erreur Google Auth : ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Échec de la connexion avec Google. Veuillez réessayer.',
@@ -444,24 +457,29 @@ public function updateProfile(Request $request)
     }
 
 
+
     /**
      * Finaliser l'inscription avec Google
      */
     public function finalizeAccountCreation(Request $request) {
         try {
-            // Valider les données reçues
+            // Valider les données reçues, y compris le token Google
             $request->validate([
-                'email' => 'required|email',
-                'Adress' => 'required|string',
-                'Phone' => 'required|string',
+                'email'   => 'required|email',
+                'Adress'  => 'required|string',
+                'Phone'   => 'required|string',
+                'token'   => 'required|string'
             ]);
 
-            // Récupérer l'utilisateur temporaire (si vous avez stocké les infos Google)
-            $email = $request->input('email');
-            $googleUser = Socialite::driver('google')->user(); // Optionnel : Revalider l'utilisateur
+            $token = $request->input('token');
 
-            // Vérifier si l'utilisateur existe
-            $user = User::where('email', $email)->first();
+            // Revalider l'utilisateur Google à partir du token
+            $googleUser = Socialite::driver('google')->userFromToken($token);
+            if (!$googleUser || !$googleUser->email || $googleUser->email !== $request->input('email')) {
+                throw new \Exception('Les informations de Google ne correspondent pas.');
+            }
+
+            // Vérifier si un utilisateur avec cet email existe déjà
             if (User::where('email', $request->input('email'))->exists()) {
                 return response()->json([
                     'success' => false,
@@ -469,37 +487,38 @@ public function updateProfile(Request $request)
                 ], 400);
             }
 
-            // Créer l'utilisateur
+            // Créer l'utilisateur avec un mot de passe aléatoire (puisque la connexion se fait via Google)
             $user = User::create([
                 'FirstName' => $googleUser->user['given_name'] ?? $googleUser->name,
-                'LastName' => $googleUser->user['family_name'] ?? '',
-                'email' => $email,
-                'password' => Hash::make(Str::random(16)), // Mot de passe aléatoire
-                'Adress' => $request->input('Adress'),
-                'Phone' => $request->input('Phone'),
+                'LastName'  => $googleUser->user['family_name'] ?? '',
+                'email'     => $request->input('email'),
+                'password'  => Hash::make(Str::random(16)), // Mot de passe généré de façon aléatoire
+                'Adress'    => $request->input('Adress'),
+                'Phone'     => $request->input('Phone'),
             ]);
 
-            // Assigner le rôle SimpleUser par défaut
+            // Assigner le rôle par défaut à l'utilisateur (par exemple, 'SimpleUser')
             $user->assignRole('SimpleUser');
 
-            // Générer un token JWT pour l'utilisateur
-            $token = JWTAuth::fromUser($user);
+            // Générer un token JWT pour l'utilisateur nouvellement créé
+            $jwtToken = JWTAuth::fromUser($user);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Compte créé avec succès !',
-                'user' => $user,
-                'token' => $token,
+                'user'    => $user,
+                'token'   => $jwtToken,
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Échec de la création du compte. Veuillez réessayer.',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
+
 
 }
 

@@ -72,11 +72,14 @@ Route::get('lieu', [DocumentController::class,'getPublicationsByLocation']);
 
 
 // Redirection vers Google
-Route::middleware([StartSession::class])->group(function () {
-    // Tes routes API ici
-    Route::get('/auth/google', function () {
-        return Socialite::driver('google')->redirect();
-    });
+// Route::middleware([StartSession::class])->group(function () {
+//     // Tes routes API ici
+//     Route::get('/auth/google', function () {
+//         return Socialite::driver('google')->redirect();
+//     });
 
-    Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
-});
+//     Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
+// });
+
+Route::post('/auth/google/callback', [AuthController::class, 'handleGoogleLogin']);
+Route::post('/auth/google/finalize-account-creation', [AuthController::class, 'finalizeAccountCreation']);
