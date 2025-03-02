@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use Laravel\Socialite\Facades\Socialite;
+use App\Http\Controllers\QrCodeController;
 use Illuminate\Notifications\Notification;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\CommentaireController;
@@ -83,3 +84,4 @@ Route::get('lieu', [DocumentController::class,'getPublicationsByLocation']);
 
 Route::post('/auth/google/callback', [AuthController::class, 'handleGoogleLogin']);
 Route::post('/auth/google/finalize-account-creation', [AuthController::class, 'finalizeAccountCreation']);
+Route::post('/found-qr', [QrCodeController::class, 'handleFoundQr']);

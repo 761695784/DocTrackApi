@@ -9,9 +9,12 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Password;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Validator;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class AuthController extends Controller
 {
@@ -39,6 +42,11 @@ class AuthController extends Controller
             ], 422);
         }
 
+        // Générer un token unique pour le QR code
+        $qrCodeToken = Str::random(32); // Token aléatoire de 32 caractères
+        $expirationDate = now()->addYear(); // Valable 1 an
+
+
         // Création de l'utilisateur
         $user = User::create([
             'FirstName' => $request->FirstName,
@@ -47,10 +55,20 @@ class AuthController extends Controller
             'Phone' => $request->Phone,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'qr_code_token' => $qrCodeToken,
+            'qr_code_expires_at' => $expirationDate,
         ]);
 
         // Assignation du rôle SimpleUser par défaut
         $user->assignRole('SimpleUser');
+
+        // Générer le QR code (URL publique vers une page de soumission)
+        $qrCodeUrl = "https://sendoctrack.netlify.app/found-qr?token=" . $qrCodeToken;
+        $qrCodeImage = QrCode::format('png')->size(200)->generate($qrCodeUrl);
+
+        // Sauvegarder le QR code dans le stockage public
+        $fileName = 'qr_codes/' . $user->id . '_qr.png';
+        Storage::disk('public')->put($fileName, $qrCodeImage);
 
         // Génération du token JWT
         $token = JWTAuth::fromUser($user);
@@ -60,7 +78,8 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Inscription réussie ! Bienvenue sur la plateforme.',
             'user' => $user,
-            'token' => $token
+            'token' => $token,
+            'qr_code_url' => Storage::url($fileName) // URL publique du QR code
         ], 201);
     }
 
@@ -115,7 +134,9 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'user' => $user,
-            'roles' => $roles
+            'roles' => $roles,
+            //afficher l'url du qr code
+            'qr_code_url' => Storage::url('qr_codes/'. $user->id. '_qr.png')
         ], 200);
     }
 
@@ -132,230 +153,230 @@ class AuthController extends Controller
         ], 200);
     }
 
-   /**
- * Modification du mot de passe de l'utilisateur
- */
-public function changePassword(Request $request)
-{
-    // Validation des données entrées
-    $validator = Validator::make($request->all(), [
-        'current_password' => 'required|string|min:8',
-        'new_password' => 'required|string|min:8|confirmed',
-    ]);
+    /**
+     * Modification du mot de passe de l'utilisateur
+     */
+    public function changePassword(Request $request)
+    {
+        // Validation des données entrées
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string|min:8',
+            'new_password' => 'required|string|min:8|confirmed',
+        ]);
 
-    // Gestion des erreurs de validation
-    if ($validator->fails()) {
+        // Gestion des erreurs de validation
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur de validation. Veuillez vérifier les entrées.',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = Auth::user();
+
+        // Vérifier que le mot de passe actuel est correct
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Le mot de passe actuel est incorrect.'
+            ], 400);
+        }
+
+        // Mettre à jour le mot de passe de l'utilisateur
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        // Retourner un message de succès
         return response()->json([
-            'success' => false,
-            'message' => 'Erreur de validation. Veuillez vérifier les entrées.',
-            'errors' => $validator->errors()
-        ], 422);
+            'success' => true,
+            'message' => 'Votre mot de passe a été mis à jour avec succès.'
+        ], 200);
     }
 
-    $user = Auth::user();
 
-    // Vérifier que le mot de passe actuel est correct
-    if (!Hash::check($request->current_password, $user->password)) {
+    /**
+     * Methode pour la liste des utilisateurs avec leurs rôles
+     */
+    public function getAllUsersWithRoles()
+    {
+        // Vérifier si l'utilisateur est authentifié et a le rôle 'Admin'
+        if (!Auth::user() || !Auth::user()->hasRole('Admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Accès refusé. Vous devez être un administrateur pour voir cette liste.'
+            ], 403);
+        }
+
+        // Récupérer tous les utilisateurs avec leurs rôles
+        $users = User::with('roles')->get();
+
+        // Parcourir chaque utilisateur pour récupérer son ou ses rôles
+        $usersWithRoles = $users->map(function ($user) {
+            return [
+                'id' => $user->id,
+                'FirstName' => $user->FirstName,
+                'LastName' => $user->LastName,
+                'Adress' => $user->Adress,
+                'Phone' => $user->Phone,
+                'email' => $user->email,
+                'roles' => $user->getRoleNames() // Récupérer les rôles
+            ];
+        });
+
+        // Retourner la réponse en JSON
         return response()->json([
-            'success' => false,
-            'message' => 'Le mot de passe actuel est incorrect.'
-        ], 400);
+            'success' => true,
+            'users' => $usersWithRoles
+        ], 200);
     }
 
-    // Mettre à jour le mot de passe de l'utilisateur
-    $user->password = Hash::make($request->new_password);
-    $user->save();
+    /**
+     * Methode pour la suppression d'un user par l'admin
+    */
 
-    // Retourner un message de succès
-    return response()->json([
-        'success' => true,
-        'message' => 'Votre mot de passe a été mis à jour avec succès.'
-    ], 200);
-}
+    public function deleteUser($id)
+    {
+        // Vérifier si l'utilisateur est authentifié et a le rôle 'Admin'
+        if (!Auth::user() || !Auth::user()->hasRole('Admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Accès refusé. Vous devez être un administrateur pour effectuer cette action.'
+            ], 403);
+        }
 
+        // Trouver l'utilisateur à supprimer
+        $user = User::find($id);
 
-/**
- * Methode pour la liste des utilisateurs avec leurs rôles
- */
-public function getAllUsersWithRoles()
-{
-    // Vérifier si l'utilisateur est authentifié et a le rôle 'Admin'
-    if (!Auth::user() || !Auth::user()->hasRole('Admin')) {
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Utilisateur non trouvé.'
+            ], 404);
+        }
+
+        // Vérifier que l'utilisateur a le rôle 'SimpleUser'
+        if ($user->hasRole('Admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous ne pouvez pas supprimer un autre administrateur.'
+            ], 403);
+        }
+
+        // Supprimer l'utilisateur s'il a le rôle 'SimpleUser'
+        $user->delete();
+
         return response()->json([
-            'success' => false,
-            'message' => 'Accès refusé. Vous devez être un administrateur pour voir cette liste.'
-        ], 403);
+            'success' => true,
+            'message' => 'Utilisateur supprimé avec succès.'
+        ], 200);
     }
 
-    // Récupérer tous les utilisateurs avec leurs rôles
-    $users = User::with('roles')->get();
 
-    // Parcourir chaque utilisateur pour récupérer son ou ses rôles
-    $usersWithRoles = $users->map(function ($user) {
-        return [
-            'id' => $user->id,
-            'FirstName' => $user->FirstName,
-            'LastName' => $user->LastName,
-            'Adress' => $user->Adress,
-            'Phone' => $user->Phone,
-            'email' => $user->email,
-            'roles' => $user->getRoleNames() // Récupérer les rôles
-        ];
-    });
+    /**
+     * Methode pour la creation d'un admin
+    */
 
-    // Retourner la réponse en JSON
-    return response()->json([
-        'success' => true,
-        'users' => $usersWithRoles
-    ], 200);
-}
+    public function createAdmin(Request $request)
+    {
+        // Vérifier si l'utilisateur est authentifié et a le rôle 'Admin'
+        if (!Auth::user() || !Auth::user()->hasRole('Admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Accès refusé. Vous devez être un administrateur pour effectuer cette action.'
+            ], 403);
+        }
 
-/**
- * Methode pour la suppression d'un user par l'admin
-*/
+        // Validation des données
+        $validator = Validator::make($request->all(), [
+            'FirstName' => 'required|string|max:40',
+            'LastName' => 'required|string|max:20',
+            'Adress' => 'required|string|max:100',
+            'Phone' => 'required|string|max:20',
+            'email' => 'required|string|email|max:50|unique:users',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
 
-public function deleteUser($id)
-{
-    // Vérifier si l'utilisateur est authentifié et a le rôle 'Admin'
-    if (!Auth::user() || !Auth::user()->hasRole('Admin')) {
+        // Gestion des erreurs de validation
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Échec de la création de l\'utilisateur. Veuillez vérifier les erreurs ci-dessous.',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Création de l'utilisateur
+        $user = User::create([
+            'FirstName' => $request->FirstName,
+            'LastName' => $request->LastName,
+            'Adress' => $request->Adress,
+            'Phone' => $request->Phone,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+        ]);
+
+        // Assignation du rôle Admin
+        $user->assignRole('Admin');
+
+        // Génération du token JWT
+        $token = JWTAuth::fromUser($user);
+
+        // Retourner un message de succès
         return response()->json([
-            'success' => false,
-            'message' => 'Accès refusé. Vous devez être un administrateur pour effectuer cette action.'
-        ], 403);
+            'success' => true,
+            'message' => 'Utilisateur Admin créé avec succès !',
+            'user' => $user,
+            'token' => $token
+        ], 201);
     }
 
-    // Trouver l'utilisateur à supprimer
-    $user = User::find($id);
+    /**
+     * Méthode pour mettre à jour les informations du profil de l'utilisateur
+     */
+    public function updateProfile(Request $request)
+    {
+        // Vérifier si l'utilisateur est authentifié
+        if (!Auth::check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous devez être connecté pour modifier votre profil.'
+            ], 401);
+        }
 
-    if (!$user) {
+        // Validation des données entrées
+        $validator = Validator::make($request->all(), [
+            'FirstName' => 'sometimes|required|string|max:40',
+            'LastName' => 'sometimes|required|string|max:20',
+            'Adress' => 'sometimes|required|string|max:100',
+            'Phone' => 'sometimes|required|string|max:20',
+            'email' => 'sometimes|required|string|email|max:50|unique:users,email,' . Auth::id(),
+        ]);
+
+        // Gestion des erreurs de validation
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur de validation. Veuillez vérifier les entrées.',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = Auth::user();
+
+        // Mettre à jour les informations de l'utilisateur
+        $user->update($request->only('FirstName', 'LastName', 'Adress', 'Phone', 'email'));
+
+        // Retourner un message de succès
         return response()->json([
-            'success' => false,
-            'message' => 'Utilisateur non trouvé.'
-        ], 404);
+            'success' => true,
+            'message' => 'Informations du profil mises à jour avec succès.',
+            'user' => $user
+        ], 200);
     }
 
-    // Vérifier que l'utilisateur a le rôle 'SimpleUser'
-    if ($user->hasRole('Admin')) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Vous ne pouvez pas supprimer un autre administrateur.'
-        ], 403);
-    }
 
-    // Supprimer l'utilisateur s'il a le rôle 'SimpleUser'
-    $user->delete();
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Utilisateur supprimé avec succès.'
-    ], 200);
-}
-
-
-/**
- * Methode pour la creation d'un admin
-*/
-
-public function createAdmin(Request $request)
-{
-    // Vérifier si l'utilisateur est authentifié et a le rôle 'Admin'
-    if (!Auth::user() || !Auth::user()->hasRole('Admin')) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Accès refusé. Vous devez être un administrateur pour effectuer cette action.'
-        ], 403);
-    }
-
-    // Validation des données
-    $validator = Validator::make($request->all(), [
-        'FirstName' => 'required|string|max:40',
-        'LastName' => 'required|string|max:20',
-        'Adress' => 'required|string|max:100',
-        'Phone' => 'required|string|max:20',
-        'email' => 'required|string|email|max:50|unique:users',
-        'password' => 'required|string|min:8|confirmed',
-    ]);
-
-    // Gestion des erreurs de validation
-    if ($validator->fails()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Échec de la création de l\'utilisateur. Veuillez vérifier les erreurs ci-dessous.',
-            'errors' => $validator->errors()
-        ], 422);
-    }
-
-    // Création de l'utilisateur
-    $user = User::create([
-        'FirstName' => $request->FirstName,
-        'LastName' => $request->LastName,
-        'Adress' => $request->Adress,
-        'Phone' => $request->Phone,
-        'email' => $request->email,
-        'password' => Hash::make($request->password),
-    ]);
-
-    // Assignation du rôle Admin
-    $user->assignRole('Admin');
-
-    // Génération du token JWT
-    $token = JWTAuth::fromUser($user);
-
-    // Retourner un message de succès
-    return response()->json([
-        'success' => true,
-        'message' => 'Utilisateur Admin créé avec succès !',
-        'user' => $user,
-        'token' => $token
-    ], 201);
-}
-
-/**
- * Méthode pour mettre à jour les informations du profil de l'utilisateur
- */
-public function updateProfile(Request $request)
-{
-    // Vérifier si l'utilisateur est authentifié
-    if (!Auth::check()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Vous devez être connecté pour modifier votre profil.'
-        ], 401);
-    }
-
-    // Validation des données entrées
-    $validator = Validator::make($request->all(), [
-        'FirstName' => 'sometimes|required|string|max:40',
-        'LastName' => 'sometimes|required|string|max:20',
-        'Adress' => 'sometimes|required|string|max:100',
-        'Phone' => 'sometimes|required|string|max:20',
-        'email' => 'sometimes|required|string|email|max:50|unique:users,email,' . Auth::id(),
-    ]);
-
-    // Gestion des erreurs de validation
-    if ($validator->fails()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Erreur de validation. Veuillez vérifier les entrées.',
-            'errors' => $validator->errors()
-        ], 422);
-    }
-
-    $user = Auth::user();
-
-    // Mettre à jour les informations de l'utilisateur
-    $user->update($request->only('FirstName', 'LastName', 'Adress', 'Phone', 'email'));
-
-    // Retourner un message de succès
-    return response()->json([
-        'success' => true,
-        'message' => 'Informations du profil mises à jour avec succès.',
-        'user' => $user
-    ], 200);
-}
-
-
- /**
+    /**
      * Envoyer un lien de réinitialisation de mot de passe
      */
     public function forgotPassword(Request $request)
@@ -518,7 +539,6 @@ public function updateProfile(Request $request)
             ], 500);
         }
     }
-
 
 }
 
