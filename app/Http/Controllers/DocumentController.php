@@ -9,7 +9,7 @@ use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use App\Models\DeclarationDePerte;
-use App\Services\OrangeSMSService;
+use App\Services\SmsService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Events\NewNotificationEvent;
@@ -28,6 +28,16 @@ use App\Notifications\RestitutionRequestNotification;
 class DocumentController extends Controller
 {
     use SoftDeletes;
+        /** @var SmsService */
+        protected $smsService;
+
+        /**
+         * Injection du service SmsService via le constructeur.
+         */
+        public function __construct(SmsService $smsService)
+        {
+            $this->smsService = $smsService;
+        }
 
     /**
      * Display a listing of the resource.
@@ -72,6 +82,98 @@ public function getAllPublications(Request $request)
     /**
      * Store a newly created resource in storage.
      */
+    // public function store(StoreDocumentRequest $request)
+    // {
+    //     // Valider la demande et récupérer le fichier image
+    //     $validatedData = $request->validated();
+    //     $document = new Document();
+    //     $document->fill([
+    //         'OwnerFirstName' => $validatedData['OwnerFirstName'],
+    //         'OwnerLastName' => $validatedData['OwnerLastName'],
+    //         'Location' => $validatedData['Location'],
+    //         'statut' => 'non récupéré', // Valeur par défaut
+    //         'document_type_id' => $validatedData['document_type_id'],
+    //         'user_id' => Auth::id(),
+    //     ]);
+
+    //     // Vérifie si un fichier image a été téléversé et est valide
+    //     if ($request->hasFile('image') && $request->file('image')->isValid()) {
+    //         // Enregistre l'image dans le dossier 'documents' du système de fichiers public
+    //         $path = $request->file('image')->store('documents', 'public');
+    //         // Génère l'URL accessible publiquement pour l'image
+    //         $document->image = Storage::url($path);
+    //     } else {
+    //         return response()->json(['error' => 'Aucun fichier image valide fourni'], 400);
+    //     }
+
+    //     // Enregistre le document dans la base de données
+    //     $document->save();
+
+    //     // Notifier l'admin d'un nouveau document publié
+    //     Notification::create([
+    //         'message' => 'Un nouveau document a été publié : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
+    //         'is_read' => false,
+    //     ]);
+
+    //     // Recherche des déclarations de perte correspondantes (insensible à la casse)
+    //     $declarations = DeclarationDePerte::whereRaw('LOWER(FirstNameInDoc) = ?', [strtolower($document->OwnerFirstName)])
+    //         ->whereRaw('LOWER(LastNameInDoc) = ?', [strtolower($document->OwnerLastName)])
+    //         ->get();
+
+    //     foreach ($declarations as $declaration) {
+    //         $user = $declaration->user; // Récupérer l'utilisateur qui a fait la déclaration
+    //         $phone = $user->Phone; // Assurez-vous que le champ `phone` est correct et existe
+    //         $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id; // URL pour afficher le document
+
+    //         try {
+    //             // Envoi de l'email
+    //             Mail::to($user->email)->send(new DocumentPublishedNotification($document, $phone, $documentUrl));
+
+    //                     // Envoi du SMS
+    //                     $phoneNumber = $user->Phone; // Numéro de téléphone de l'utilisateur déclarant
+    //                     $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id;
+    //                     $message = 'Un document correspondant à votre déclaration de perte a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
+
+    //                     $this->sendSMS($phoneNumber, $message); // Appel à la méthode pour l'envoi de SMS
+    //             // Log de l'email
+    //             \App\Models\EmailLog::create([
+    //                 'from' => config('mail.from.address'),
+    //                 'to' => $user->email,
+    //                 'subject' => 'Correspondance à votre déclaration de perte',
+    //                 'body' => 'Le document publié correspondant aux informations : ' .
+    //                           $document->OwnerFirstName . ' ' . $document->OwnerLastName .
+    //                           ' avec le numéro du publicateur : ' . $phone,
+    //                 'publisher_user_id' => $document->user->id,
+    //                 'requester_user_id' => $user->id,
+    //                 'document_id' => $document->id,
+    //                 'declarant_user_id' => $user->id,
+    //             ]);
+
+    //             Log::info('Email et SMS envoyés avec succès à ' . $user->email);
+
+    //         } catch (\Exception $e) {
+    //             Log::error('Erreur lors de l\'envoi de la notification : ' . $e->getMessage(), [
+    //                 'publisher_user_id' => $document->user->id,
+    //                 'requester_user_id' => $user->id,
+    //                 'document_id' => $document->id,
+    //                 'declarant_user_id' => $user->id,
+    //             ]);
+    //         }
+
+    //         // Enregistrer une notification pour l'utilisateur
+    //         Notification::create([
+    //             'message' => 'Un document correspondant à une déclaration a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
+    //             'is_read' => false,
+    //         ]);
+    //     }
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Document créé avec succès.',
+    //         'document' => $document
+    //     ], 201);
+    // }
+
     public function store(StoreDocumentRequest $request)
     {
         // Valider la demande et récupérer le fichier image
@@ -86,47 +188,44 @@ public function getAllPublications(Request $request)
             'user_id' => Auth::id(),
         ]);
 
-        // Vérifie si un fichier image a été téléversé et est valide
+        // Gestion de l'image
         if ($request->hasFile('image') && $request->file('image')->isValid()) {
-            // Enregistre l'image dans le dossier 'documents' du système de fichiers public
             $path = $request->file('image')->store('documents', 'public');
-            // Génère l'URL accessible publiquement pour l'image
             $document->image = Storage::url($path);
         } else {
             return response()->json(['error' => 'Aucun fichier image valide fourni'], 400);
         }
 
-        // Enregistre le document dans la base de données
         $document->save();
 
-        // Notifier l'admin d'un nouveau document publié
+        // Notifier l'admin
         Notification::create([
             'message' => 'Un nouveau document a été publié : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
             'is_read' => false,
         ]);
 
-        // Recherche des déclarations de perte correspondantes (insensible à la casse)
+        // Recherche des déclarations correspondantes
         $declarations = DeclarationDePerte::whereRaw('LOWER(FirstNameInDoc) = ?', [strtolower($document->OwnerFirstName)])
             ->whereRaw('LOWER(LastNameInDoc) = ?', [strtolower($document->OwnerLastName)])
             ->get();
 
         foreach ($declarations as $declaration) {
-            $user = $declaration->user; // Récupérer l'utilisateur qui a fait la déclaration
-            $phone = $user->Phone; // Assurez-vous que le champ `phone` est correct et existe
-            $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id; // URL pour afficher le document
+            $user = $declaration->user;
+            $phone = $user->Phone;
+            $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id;
 
             try {
                 // Envoi de l'email
                 Mail::to($user->email)->send(new DocumentPublishedNotification($document, $phone, $documentUrl));
 
-                        // Envoi du SMS
-                        $phoneNumber = $user->Phone; // Numéro de téléphone de l'utilisateur déclarant
-                        $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id;
-                        $message = 'Un document correspondant à votre déclaration de perte a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
+                // Envoi du SMS via le service
+                $message = 'Un document correspondant à votre déclaration de perte a été trouvé : ' .
+                           $document->OwnerFirstName . ' ' . $document->OwnerLastName .
+                           '. Consultez-le ici : ' . $documentUrl;
+                     $this->smsService->sendSms($phone, $message);
 
-                        $this->sendSMS($phoneNumber, $message); // Appel à la méthode pour l'envoi de SMS
                 // Log de l'email
-                \App\Models\EmailLog::create([
+                EmailLog::create([
                     'from' => config('mail.from.address'),
                     'to' => $user->email,
                     'subject' => 'Correspondance à votre déclaration de perte',
@@ -150,9 +249,10 @@ public function getAllPublications(Request $request)
                 ]);
             }
 
-            // Enregistrer une notification pour l'utilisateur
+            // Notification pour l'utilisateur
             Notification::create([
-                'message' => 'Un document correspondant à une déclaration a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
+                'message' => 'Un document correspondant à une déclaration a été trouvé : ' .
+                             $document->OwnerFirstName . ' ' . $document->OwnerLastName,
                 'is_read' => false,
             ]);
         }
@@ -164,145 +264,145 @@ public function getAllPublications(Request $request)
         ], 201);
     }
 
-     // Méthode pour envoyer un SMS via l'API Orange
-    protected function sendSMS($phoneNumber, $message)
-    {
-        // Log du numéro de téléphone avant nettoyage
-        Log::info('Numéro de téléphone avant nettoyage : ' . $phoneNumber);
+    //  // Méthode pour envoyer un SMS via l'API Orange
+    // protected function sendSMS($phoneNumber, $message)
+    // {
+    //     // Log du numéro de téléphone avant nettoyage
+    //     Log::info('Numéro de téléphone avant nettoyage : ' . $phoneNumber);
 
-        // Nettoyer le numéro de téléphone
-        $phoneNumber = str_replace('+221', '', $phoneNumber); // Supprime '+221' du numéro
-        $phoneNumber = '221' . $phoneNumber; // Ajoute l'indicatif Sénégal
+    //     // Nettoyer le numéro de téléphone
+    //     $phoneNumber = str_replace('+221', '', $phoneNumber); // Supprime '+221' du numéro
+    //     $phoneNumber = '221' . $phoneNumber; // Ajoute l'indicatif Sénégal
 
-        // Log du numéro de téléphone après nettoyage
-        Log::info('Numéro de téléphone après nettoyage : ' . $phoneNumber);
+    //     // Log du numéro de téléphone après nettoyage
+    //     Log::info('Numéro de téléphone après nettoyage : ' . $phoneNumber);
 
-        // Vérifier la longueur du numéro
-        if (strlen($phoneNumber) < 12) { // 221 + 9 chiffres = 12 caractères
-            Log::error('Numéro de téléphone invalide : ' . $phoneNumber);
-            return;
-        }
+    //     // Vérifier la longueur du numéro
+    //     if (strlen($phoneNumber) < 12) { // 221 + 9 chiffres = 12 caractères
+    //         Log::error('Numéro de téléphone invalide : ' . $phoneNumber);
+    //         return;
+    //     }
 
-        // Récupérer les identifiants depuis la configuration
-        $clientId = config('services.orange.client_id');
-        $clientSecret = config('services.orange.client_secret');
+    //     // Récupérer les identifiants depuis la configuration
+    //     $clientId = config('services.orange.client_id');
+    //     $clientSecret = config('services.orange.client_secret');
 
-        // Vérifier que les identifiants sont bien définis
-        if (empty($clientId) || empty($clientSecret)) {
-            Log::error('Client ID ou Client Secret non défini.');
-            return;
-        }
+    //     // Vérifier que les identifiants sont bien définis
+    //     if (empty($clientId) || empty($clientSecret)) {
+    //         Log::error('Client ID ou Client Secret non défini.');
+    //         return;
+    //     }
 
-        // Log des identifiants
-        Log::info('Client ID : ' . $clientId);
-        Log::info('Client Secret : ' . $clientSecret);
+    //     // Log des identifiants
+    //     Log::info('Client ID : ' . $clientId);
+    //     Log::info('Client Secret : ' . $clientSecret);
 
-        // Obtenir le token d'accès
-        $accessToken = $this->getAccessToken($clientId, $clientSecret);
+    //     // Obtenir le token d'accès
+    //     $accessToken = $this->getAccessToken($clientId, $clientSecret);
 
-        if (!$accessToken) {
-            Log::error('Erreur : Impossible de récupérer le token d\'accès.');
-            return;
-        }
+    //     if (!$accessToken) {
+    //         Log::error('Erreur : Impossible de récupérer le token d\'accès.');
+    //         return;
+    //     }
 
-        // Envoyer le SMS
-        $senderAddress = config('services.orange.sender_address');
+    //     // Envoyer le SMS
+    //     $senderAddress = config('services.orange.sender_address');
 
-        // Vérifier que le senderAddress commence par 'tel:'
-        if (strpos($senderAddress, 'tel:') !== 0) {
-            $senderAddress = 'tel:' . $senderAddress; // Ajouter le préfixe si absent
-        }
+    //     // Vérifier que le senderAddress commence par 'tel:'
+    //     if (strpos($senderAddress, 'tel:') !== 0) {
+    //         $senderAddress = 'tel:' . $senderAddress; // Ajouter le préfixe si absent
+    //     }
 
-        $url = 'https://api.orange.com/smsmessaging/v1/outbound/' . urlencode($senderAddress) . '/requests';
+    //     $url = 'https://api.orange.com/smsmessaging/v1/outbound/' . urlencode($senderAddress) . '/requests';
 
-        $data = [
-            'outboundSMSMessageRequest' => [
-                'address' => 'tel:+' . $phoneNumber,  // Format international complet
-                'outboundSMSTextMessage' => [
-                    'message' => $message,
-                ],
-                'senderAddress' => $senderAddress, // Utiliser le senderAddress formaté
-                // 'senderName' => "SMS 183786",
-                'senderName' => "DocTrack",
-            ]
-        ];
+    //     $data = [
+    //         'outboundSMSMessageRequest' => [
+    //             'address' => 'tel:+' . $phoneNumber,  // Format international complet
+    //             'outboundSMSTextMessage' => [
+    //                 'message' => $message,
+    //             ],
+    //             'senderAddress' => $senderAddress, // Utiliser le senderAddress formaté
+    //             // 'senderName' => "SMS 183786",
+    //             'senderName' => "DocTrack",
+    //         ]
+    //     ];
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Authorization: Bearer ' . $accessToken,
-            'Content-Type: application/json',
-            'Accept: application/json',
-        ]);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+    //     $ch = curl_init();
+    //     curl_setopt($ch, CURLOPT_URL, $url);
+    //     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    //     curl_setopt($ch, CURLOPT_POST, true);
+    //     curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    //         'Authorization: Bearer ' . $accessToken,
+    //         'Content-Type: application/json',
+    //         'Accept: application/json',
+    //     ]);
+    //     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
 
-        $response = curl_exec($ch);
-        $error = curl_error($ch);
-        curl_close($ch);
+    //     $response = curl_exec($ch);
+    //     $error = curl_error($ch);
+    //     curl_close($ch);
 
-        if ($response === false) {
-            Log::error('Erreur lors de l\'envoi du SMS : ' . $error);
-            return;
-        }
+    //     if ($response === false) {
+    //         Log::error('Erreur lors de l\'envoi du SMS : ' . $error);
+    //         return;
+    //     }
 
-        $responseData = json_decode($response, true);
-        if (isset($responseData['outboundSMSMessageRequest'])) {
-            Log::info('SMS envoyé avec succès à ' . $phoneNumber);
-        } else {
-            Log::error('Erreur lors de l\'envoi du SMS : ' . $response);
-        }
-    }
+    //     $responseData = json_decode($response, true);
+    //     if (isset($responseData['outboundSMSMessageRequest'])) {
+    //         Log::info('SMS envoyé avec succès à ' . $phoneNumber);
+    //     } else {
+    //         Log::error('Erreur lors de l\'envoi du SMS : ' . $response);
+    //     }
+    // }
 
-    // Méthode pour obtenir un jeton d'accès
-    protected function getAccessToken($clientId, $clientSecret)
-    {
-        $url = 'https://api.orange.com/oauth/v3/token';
+    // // Méthode pour obtenir un jeton d'accès
+    // protected function getAccessToken($clientId, $clientSecret)
+    // {
+    //     $url = 'https://api.orange.com/oauth/v3/token';
 
-        // Log des identifiants et de l'en-tête d'autorisation
-        Log::info('Tentative d\'obtention du token avec les identifiants :', [
-            'clientId' => $clientId,
-            'clientSecret' => $clientSecret,
-            'authorizationHeader' => 'Basic ' . base64_encode($clientId . ':' . $clientSecret),
-        ]);
+    //     // Log des identifiants et de l'en-tête d'autorisation
+    //     Log::info('Tentative d\'obtention du token avec les identifiants :', [
+    //         'clientId' => $clientId,
+    //         'clientSecret' => $clientSecret,
+    //         'authorizationHeader' => 'Basic ' . base64_encode($clientId . ':' . $clientSecret),
+    //     ]);
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Authorization: Basic ' . base64_encode($clientId . ':' . $clientSecret),
-            'Content-Type: application/x-www-form-urlencoded',
-            'Accept: application/json',
-        ]);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, 'grant_type=client_credentials');
+    //     $ch = curl_init();
+    //     curl_setopt($ch, CURLOPT_URL, $url);
+    //     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    //     curl_setopt($ch, CURLOPT_POST, true);
+    //     curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    //         'Authorization: Basic ' . base64_encode($clientId . ':' . $clientSecret),
+    //         'Content-Type: application/x-www-form-urlencoded',
+    //         'Accept: application/json',
+    //     ]);
+    //     curl_setopt($ch, CURLOPT_POSTFIELDS, 'grant_type=client_credentials');
 
-        $response = curl_exec($ch);
-        $error = curl_error($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE); // Récupère le code HTTP
-        curl_close($ch);
+    //     $response = curl_exec($ch);
+    //     $error = curl_error($ch);
+    //     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE); // Récupère le code HTTP
+    //     curl_close($ch);
 
-        // Log de la réponse
-        Log::info('Réponse de l\'API Orange :', [
-            'http_code' => $httpCode,
-            'response' => $response,
-            'error' => $error,
-        ]);
+    //     // Log de la réponse
+    //     Log::info('Réponse de l\'API Orange :', [
+    //         'http_code' => $httpCode,
+    //         'response' => $response,
+    //         'error' => $error,
+    //     ]);
 
-        if ($response === false) {
-            Log::error('Erreur lors de l\'obtention du jeton d\'accès : ' . $error);
-            throw new \Exception('Erreur cURL : ' . $error);
-        }
+    //     if ($response === false) {
+    //         Log::error('Erreur lors de l\'obtention du jeton d\'accès : ' . $error);
+    //         throw new \Exception('Erreur cURL : ' . $error);
+    //     }
 
-        $data = json_decode($response, true);
-        if (isset($data['access_token'])) {
-            return $data['access_token'];
-        }
+    //     $data = json_decode($response, true);
+    //     if (isset($data['access_token'])) {
+    //         return $data['access_token'];
+    //     }
 
-        Log::error('Erreur lors de l\'obtention du jeton d\'accès : ' . $response);
-        throw new \Exception('Impossible d\'obtenir le jeton d\'accès');
-    }
+    //     Log::error('Erreur lors de l\'obtention du jeton d\'accès : ' . $response);
+    //     throw new \Exception('Impossible d\'obtenir le jeton d\'accès');
+    // }
 
         /**
      * Gérer la demande de restitution.
@@ -348,8 +448,7 @@ public function getAllPublications(Request $request)
         $smsMessage = 'Bonjour, vous avez une demande de restitution pour le document : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
 
         // Appeler la méthode sendSMS
-        $this->sendSMS($phoneNumber, $smsMessage);
-
+        $this->smsService->sendSms($phoneNumber, $smsMessage);
         // Retourner une réponse JSON
         return response()->json(['message' => 'Demande de restitution envoyée avec succès.']);
     }
