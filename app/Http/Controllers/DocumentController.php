@@ -6,10 +6,11 @@ use GuzzleHttp\Client;
 use App\Models\Document;
 use App\Models\EmailLog;
 use App\Models\Notification;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Symfony\Component\Clock\now;
 use App\Models\DeclarationDePerte;
-use App\Services\SmsService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Events\NewNotificationEvent;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cache;
+use Intervention\Image\Facades\Image;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\StoreDocumentRequest;
@@ -188,13 +190,32 @@ public function getAllPublications(Request $request)
             'user_id' => Auth::id(),
         ]);
 
-        // Gestion de l'image
         if ($request->hasFile('image') && $request->file('image')->isValid()) {
-            $path = $request->file('image')->store('documents', 'public');
-            $document->image = Storage::url($path);
+            $originalFile = $request->file('image');
+            $fileName = time() . '_' . $originalFile->getClientOriginalName(); // Nom unique, par exemple "1741101253_2.png"
+            $path = 'documents/' . $fileName; // Par exemple "documents/1741101253_2.png"
+
+            try {
+                Log::info('Tentative de conversion de l’image en WebP');
+                // Convertir l'image en WebP avec le facade
+                $image = Image::make($originalFile);
+                $image->encode('webp', 90); // Qualité 90% (ajustable)
+
+                // Sauvegarder en WebP dans le stockage public avec l'extension .webp
+                $webpPath = $path . '.webp'; // Par exemple "documents/1741101253_2.png.webp"
+                Storage::disk('public')->put($webpPath, $image->stream());
+
+                // Stocker l'URL publique de l'image WebP
+                $document->image = Storage::url($webpPath);
+                Log::info('Image convertie et sauvegardée avec succès : ' . $document->image);
+            } catch (\Exception $e) {
+                Log::error('Erreur lors de la conversion de l’image en WebP : ' . $e->getMessage());
+                return response()->json(['error' => 'Erreur lors du traitement de l’image'], 500);
+            }
         } else {
             return response()->json(['error' => 'Aucun fichier image valide fourni'], 400);
         }
+
 
         $document->save();
 
@@ -453,7 +474,7 @@ public function getAllPublications(Request $request)
         return response()->json(['message' => 'Demande de restitution envoyée avec succès.']);
     }
 
-            /**
+     /**
      * Display the specified resource.
      */
     public function show($id) {

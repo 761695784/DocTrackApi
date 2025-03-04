@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Ramsey\Uuid\Uuid;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -21,6 +22,68 @@ class AuthController extends Controller
     /**
      * Inscription d'un utilisateur
      */
+    // public function register(Request $request)
+    // {
+    //     // Validation des données
+    //     $validator = Validator::make($request->all(), [
+    //         'FirstName' => 'required|string|max:40',
+    //         'LastName' => 'required|string|max:20',
+    //         'Adress' => 'required|string|max:100',
+    //         'Phone' => 'required|string|max:20',
+    //         'email' => 'required|string|email|max:50|unique:users',
+    //         'password' => 'required|string|min:8|confirmed',
+    //     ]);
+
+    //     // Gestion des erreurs de validation
+    //     if ($validator->fails()) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Échec de l\'inscription. Veuillez vérifier les erreurs ci-dessous.',
+    //             'errors' => $validator->errors()
+    //         ], 422);
+    //     }
+
+    //     // Générer un token unique pour le QR code
+    //     $qrCodeToken = Str::random(32); // Token aléatoire de 32 caractères
+    //     $expirationDate = now()->addYear(); // Valable 1 an
+
+
+    //     // Création de l'utilisateur
+    //     $user = User::create([
+    //         'FirstName' => $request->FirstName,
+    //         'LastName' => $request->LastName,
+    //         'Adress' => $request->Adress,
+    //         'Phone' => $request->Phone,
+    //         'email' => $request->email,
+    //         'password' => Hash::make($request->password),
+    //         'qr_code_token' => $qrCodeToken,
+    //         'qr_code_expires_at' => $expirationDate,
+    //     ]);
+
+    //     // Assignation du rôle SimpleUser par défaut
+    //     $user->assignRole('SimpleUser');
+
+    //     // Générer le QR code (URL publique vers une page de soumission)
+    //     $qrCodeUrl = "https://sendoctrack.netlify.app/found-qr?token=" . $qrCodeToken;
+    //     $qrCodeImage = QrCode::format('png')->size(200)->generate($qrCodeUrl);
+
+    //     // Sauvegarder le QR code dans le stockage public
+    //     $fileName = 'qr_codes/' . $user->id . '_qr.png';
+    //     Storage::disk('public')->put($fileName, $qrCodeImage);
+
+    //     // Génération du token JWT
+    //     $token = JWTAuth::fromUser($user);
+
+    //     // Retourner un message de succès
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Inscription réussie ! Bienvenue sur la plateforme.',
+    //         'user' => $user,
+    //         'token' => $token,
+    //         'qr_code_url' => Storage::url($fileName) // URL publique du QR code
+    //     ], 201);
+    // }
+
     public function register(Request $request)
     {
         // Validation des données
@@ -42,10 +105,9 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // Générer un token unique pour le QR code
-        $qrCodeToken = Str::random(32); // Token aléatoire de 32 caractères
-        $expirationDate = now()->addYear(); // Valable 1 an
-
+        // Générer un token unique pour le QR code avec Ramsey UUID
+        $qrCodeToken = Uuid::uuid4()->toString(); // Remplace Str::random(32) par un UUID v4
+        $expirationDate = now()->addYear(); // Valable 1 an (inchangé)
 
         // Création de l'utilisateur
         $user = User::create([
