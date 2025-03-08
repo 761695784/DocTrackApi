@@ -62,6 +62,7 @@ Route::middleware('auth:api')->group(function () {
     Route::get('supp', [DocumentController::class,'getDeletedDocuments']);
     Route::get('recup', [DocumentController::class,'getRecoveredDocuments']);
     Route::get('nonrecup', [DocumentController::class,'getNotRecoveredDocuments']);
+    Route::post('/renew-qr-code', [AuthController::class, 'renewQrCode']);
 
 
 });

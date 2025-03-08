@@ -105,9 +105,10 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // Générer un token unique pour le QR code avec Ramsey UUID
-        $qrCodeToken = Uuid::uuid4()->toString(); // Remplace Str::random(32) par un UUID v4
-        $expirationDate = now()->addYear(); // Valable 1 an (inchangé)
+        // Générer un token unique pour le QR code avec Ramsey UUID V4
+        $qrCodeToken = Uuid::uuid4()->toString();
+        $expirationDate = now()->addYear(); // Valable 1 an
+        // $expirationDate = now()->addMinutes(3);  // QR Code valable pour 3 minutes pour tester
 
         // Création de l'utilisateur
         $user = User::create([
@@ -125,7 +126,8 @@ class AuthController extends Controller
         $user->assignRole('SimpleUser');
 
         // Générer le QR code (URL publique vers une page de soumission)
-        $qrCodeUrl = "https://sendoctrack.netlify.app/found-qr?token=" . $qrCodeToken;
+        $qrCodeUrl = "https://sendoctrack.netlify.app/found-qr?token=" . $qrCodeToken; // redirection vers le lien deployé apres scann du qr code
+        // $qrCodeUrl = url('/api/found-qr/' . $qrCodeToken); //pour le test en local
         $qrCodeImage = QrCode::format('png')->size(200)->generate($qrCodeUrl);
 
         // Sauvegarder le QR code dans le stockage public
@@ -598,6 +600,72 @@ class AuthController extends Controller
                 'success' => false,
                 'message' => 'Échec de la création du compte. Veuillez réessayer.',
                 'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+
+    /**
+     * Renouvelle le QR code de l'utilisateur authentifié.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function renewQrCode(Request $request)
+    {
+        try {
+            // Récupérer l'utilisateur authentifié via JWT
+            $user = JWTAuth::parseToken()->authenticate();
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié.'
+                ], 401);
+            }
+
+            // Générer un nouveau token pour le QR code
+            $newQrCodeToken = Uuid::uuid4()->toString();
+            $newExpirationDate = now()->addYear(); // Valable 1 an
+
+            // Mettre à jour l'utilisateur
+            $user->qr_code_token = $newQrCodeToken;
+            $user->qr_code_expires_at = $newExpirationDate;
+            $user->save();
+
+            // Générer un nouveau QR code
+            $qrCodeUrl = "https://sendoctrack.netlify.app/found-qr?token=" . $newQrCodeToken; //Redirection vers l'appli apres scann
+            // $qrCodeUrl = url('/api/found-qr/' . $newQrCodeToken);
+            $qrCodeImage = QrCode::format('png')->size(200)->generate($qrCodeUrl);
+
+            // Sauvegarder le nouveau QR code dans le stockage public
+            $fileName = 'qr_codes/' . $user->id . '_qr.png';
+            Storage::disk('public')->put($fileName, $qrCodeImage);
+
+            // Logger l'action
+            Log::info('QR code renouvelé avec succès pour l\'utilisateur', [
+                'user_id' => $user->id,
+                'new_qr_code_token' => $newQrCodeToken,
+                'new_expiration' => $newExpirationDate,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'QR code renouvelé avec succès.',
+                'qr_code_url' => Storage::url($fileName),
+                'new_expiration' => $newExpirationDate,
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors du renouvellement du QR code', [
+                'user_id' => $user->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du renouvellement du QR code.',
             ], 500);
         }
     }
