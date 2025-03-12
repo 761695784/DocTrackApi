@@ -143,7 +143,7 @@ class AuthController extends Controller
             'message' => 'Inscription réussie ! Bienvenue sur la plateforme.',
             'user' => $user,
             'token' => $token,
-            'qr_code_url' => Storage::url($fileName) // URL publique du QR code
+            'qr_code_url' => Storage::url($fileName), // URL publique du QR code
         ], 201);
     }
 
@@ -279,6 +279,7 @@ class AuthController extends Controller
         $usersWithRoles = $users->map(function ($user) {
             return [
                 'id' => $user->id,
+                'uuid' => $user->uuid,
                 'FirstName' => $user->FirstName,
                 'LastName' => $user->LastName,
                 'Adress' => $user->Adress,
@@ -299,7 +300,8 @@ class AuthController extends Controller
      * Methode pour la suppression d'un user par l'admin
     */
 
-    public function deleteUser($id)
+    // public function deleteUser($id)
+    public function deleteUser($uuid)
     {
         // Vérifier si l'utilisateur est authentifié et a le rôle 'Admin'
         if (!Auth::user() || !Auth::user()->hasRole('Admin')) {
@@ -310,7 +312,10 @@ class AuthController extends Controller
         }
 
         // Trouver l'utilisateur à supprimer
-        $user = User::find($id);
+        // $user = User::find($id);
+        // Trouver l'utilisateur à supprimer par son uuid
+        $user = User::where('uuid', $uuid)->first();
+
 
         if (!$user) {
             return response()->json([

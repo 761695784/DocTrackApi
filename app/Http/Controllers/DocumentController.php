@@ -30,151 +30,47 @@ use App\Notifications\RestitutionRequestNotification;
 class DocumentController extends Controller
 {
     use SoftDeletes;
-        /** @var SmsService */
-        protected $smsService;
+    /**
+     * Afficher tous les documents 
+     */
+    public function index()
+    {
+        $user = Auth::user(); // Récupérer l'utilisateur authentifié
 
-        /**
-         * Injection du service SmsService via le constructeur.
-         */
-        public function __construct(SmsService $smsService)
-        {
-            $this->smsService = $smsService;
+        // Si l'utilisateur est un admin, récupérer tous les documents (y compris ceux supprimés)
+        if ($user && $user->hasRole('Admin')) {
+            $documents = Document::withTrashed()->with(['user', 'documentType'])->get();
+        } else {
+            // Récupère uniquement les documents actifs (non supprimés)
+            $documents = Document::whereNull('deleted_at')->with(['user', 'documentType'])->get();
         }
 
-    /**
-     * Display a listing of the resource.
-     */
-/**
- * Display a listing of the resource.
- */
-public function index()
-{
-    $user = Auth::user(); // Récupérer l'utilisateur authentifié
-
-    // Si l'utilisateur est un admin, récupérer tous les documents (y compris ceux supprimés)
-    if ($user && $user->hasRole('Admin')) {
-        $documents = Document::withTrashed()->with(['user', 'documentType'])->get();
-    } else {
-        // Récupère uniquement les documents actifs (non supprimés)
-        $documents = Document::whereNull('deleted_at')->with(['user', 'documentType'])->get();
+        // Retourne les documents en JSON, y compris les informations de l'utilisateur et du type de document
+        return response()->json($documents);
     }
 
-    // Retourne les documents en JSON, y compris les informations de l'utilisateur et du type de document
-    return response()->json($documents);
-}
+    // Afficher toutes les publications y compris celles supprimer en soft
+    public function getAllPublications(Request $request)
+    {
+        // Vérifie si l'utilisateur est connecté
+        if (Auth::check()) {
+            // Récupère toutes les publications, y compris les supprimées (soft deleted)
+            $documents = Document::withTrashed()->with(['user', 'documentType'])->get(); // Inclut les soft deletes et les infos de l'utilisateur
 
-public function getAllPublications(Request $request)
-{
-    // Vérifie si l'utilisateur est connecté
-    if (Auth::check()) {
-        // Récupère toutes les publications, y compris les supprimées (soft deleted)
-        $documents = Document::withTrashed()->with(['user', 'documentType'])->get(); // Inclut les soft deletes et les infos de l'utilisateur
-
-        return response()->json($documents); // Retourne le tableau directement
-    } else {
-        // Si l'utilisateur n'est pas connecté, retourne un message d'erreur
-        return response()->json([
-            'success' => false,
-            'message' => 'Utilisateur non authentifié',
-        ], 401); // Code 401 pour l'authentification non autorisée
+            return response()->json($documents); // Retourne le tableau directement
+        } else {
+            // Si l'utilisateur n'est pas connecté, retourne un message d'erreur
+            return response()->json([
+                'success' => false,
+                'message' => 'Utilisateur non authentifié',
+            ], 401); // Code 401 pour l'authentification non autorisée
+        }
     }
-}
 
 
     /**
-     * Store a newly created resource in storage.
+     * Creer une nouvelle publication
      */
-    // public function store(StoreDocumentRequest $request)
-    // {
-    //     // Valider la demande et récupérer le fichier image
-    //     $validatedData = $request->validated();
-    //     $document = new Document();
-    //     $document->fill([
-    //         'OwnerFirstName' => $validatedData['OwnerFirstName'],
-    //         'OwnerLastName' => $validatedData['OwnerLastName'],
-    //         'Location' => $validatedData['Location'],
-    //         'statut' => 'non récupéré', // Valeur par défaut
-    //         'document_type_id' => $validatedData['document_type_id'],
-    //         'user_id' => Auth::id(),
-    //     ]);
-
-    //     // Vérifie si un fichier image a été téléversé et est valide
-    //     if ($request->hasFile('image') && $request->file('image')->isValid()) {
-    //         // Enregistre l'image dans le dossier 'documents' du système de fichiers public
-    //         $path = $request->file('image')->store('documents', 'public');
-    //         // Génère l'URL accessible publiquement pour l'image
-    //         $document->image = Storage::url($path);
-    //     } else {
-    //         return response()->json(['error' => 'Aucun fichier image valide fourni'], 400);
-    //     }
-
-    //     // Enregistre le document dans la base de données
-    //     $document->save();
-
-    //     // Notifier l'admin d'un nouveau document publié
-    //     Notification::create([
-    //         'message' => 'Un nouveau document a été publié : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
-    //         'is_read' => false,
-    //     ]);
-
-    //     // Recherche des déclarations de perte correspondantes (insensible à la casse)
-    //     $declarations = DeclarationDePerte::whereRaw('LOWER(FirstNameInDoc) = ?', [strtolower($document->OwnerFirstName)])
-    //         ->whereRaw('LOWER(LastNameInDoc) = ?', [strtolower($document->OwnerLastName)])
-    //         ->get();
-
-    //     foreach ($declarations as $declaration) {
-    //         $user = $declaration->user; // Récupérer l'utilisateur qui a fait la déclaration
-    //         $phone = $user->Phone; // Assurez-vous que le champ `phone` est correct et existe
-    //         $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id; // URL pour afficher le document
-
-    //         try {
-    //             // Envoi de l'email
-    //             Mail::to($user->email)->send(new DocumentPublishedNotification($document, $phone, $documentUrl));
-
-    //                     // Envoi du SMS
-    //                     $phoneNumber = $user->Phone; // Numéro de téléphone de l'utilisateur déclarant
-    //                     $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id;
-    //                     $message = 'Un document correspondant à votre déclaration de perte a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
-
-    //                     $this->sendSMS($phoneNumber, $message); // Appel à la méthode pour l'envoi de SMS
-    //             // Log de l'email
-    //             \App\Models\EmailLog::create([
-    //                 'from' => config('mail.from.address'),
-    //                 'to' => $user->email,
-    //                 'subject' => 'Correspondance à votre déclaration de perte',
-    //                 'body' => 'Le document publié correspondant aux informations : ' .
-    //                           $document->OwnerFirstName . ' ' . $document->OwnerLastName .
-    //                           ' avec le numéro du publicateur : ' . $phone,
-    //                 'publisher_user_id' => $document->user->id,
-    //                 'requester_user_id' => $user->id,
-    //                 'document_id' => $document->id,
-    //                 'declarant_user_id' => $user->id,
-    //             ]);
-
-    //             Log::info('Email et SMS envoyés avec succès à ' . $user->email);
-
-    //         } catch (\Exception $e) {
-    //             Log::error('Erreur lors de l\'envoi de la notification : ' . $e->getMessage(), [
-    //                 'publisher_user_id' => $document->user->id,
-    //                 'requester_user_id' => $user->id,
-    //                 'document_id' => $document->id,
-    //                 'declarant_user_id' => $user->id,
-    //             ]);
-    //         }
-
-    //         // Enregistrer une notification pour l'utilisateur
-    //         Notification::create([
-    //             'message' => 'Un document correspondant à une déclaration a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
-    //             'is_read' => false,
-    //         ]);
-    //     }
-
-    //     return response()->json([
-    //         'success' => true,
-    //         'message' => 'Document créé avec succès.',
-    //         'document' => $document
-    //     ], 201);
-    // }
 
     public function store(StoreDocumentRequest $request)
     {
@@ -233,17 +129,23 @@ public function getAllPublications(Request $request)
         foreach ($declarations as $declaration) {
             $user = $declaration->user;
             $phone = $user->Phone;
-            $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id;
+            // $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id;
+            $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->uuid;
+
 
             try {
                 // Envoi de l'email
                 Mail::to($user->email)->send(new DocumentPublishedNotification($document, $phone, $documentUrl));
+                // Mail::to($user->email)->send(new DocumentPublishedNotification($document, $phone, $documentUrl, $user));
 
-                // Envoi du SMS via le service
+                // Envoi du SMS
+                $phoneNumber = $user->Phone; // Numéro de téléphone de l'utilisateur déclarant
                 $message = 'Un document correspondant à votre déclaration de perte a été trouvé : ' .
                            $document->OwnerFirstName . ' ' . $document->OwnerLastName .
                            '. Consultez-le ici : ' . $documentUrl;
-                     $this->smsService->sendSms($phone, $message);
+                 // Appel à la méthode pour l'envoi de SMS
+                  $this->sendSMS($phoneNumber, $message);
+
 
                 // Log de l'email
                 EmailLog::create([
@@ -255,7 +157,7 @@ public function getAllPublications(Request $request)
                               ' avec le numéro du publicateur : ' . $phone,
                     'publisher_user_id' => $document->user->id,
                     'requester_user_id' => $user->id,
-                    'document_id' => $document->id,
+                    'document_id' => $document->uuid,
                     'declarant_user_id' => $user->id,
                 ]);
 
@@ -265,7 +167,7 @@ public function getAllPublications(Request $request)
                 Log::error('Erreur lors de l\'envoi de la notification : ' . $e->getMessage(), [
                     'publisher_user_id' => $document->user->id,
                     'requester_user_id' => $user->id,
-                    'document_id' => $document->id,
+                    'document_id' => $document->uuid,
                     'declarant_user_id' => $user->id,
                 ]);
             }
@@ -285,153 +187,153 @@ public function getAllPublications(Request $request)
         ], 201);
     }
 
-    //  // Méthode pour envoyer un SMS via l'API Orange
-    // protected function sendSMS($phoneNumber, $message)
-    // {
-    //     // Log du numéro de téléphone avant nettoyage
-    //     Log::info('Numéro de téléphone avant nettoyage : ' . $phoneNumber);
+     // Méthode pour envoyer un SMS via l'API Orange
+    protected function sendSMS($phoneNumber, $message)
+    {
+        // Log du numéro de téléphone avant nettoyage
+        Log::info('Numéro de téléphone avant nettoyage : ' . $phoneNumber);
 
-    //     // Nettoyer le numéro de téléphone
-    //     $phoneNumber = str_replace('+221', '', $phoneNumber); // Supprime '+221' du numéro
-    //     $phoneNumber = '221' . $phoneNumber; // Ajoute l'indicatif Sénégal
+        // Nettoyer le numéro de téléphone
+        $phoneNumber = str_replace('+221', '', $phoneNumber); // Supprime '+221' du numéro
+        $phoneNumber = '221' . $phoneNumber; // Ajoute l'indicatif Sénégal
 
-    //     // Log du numéro de téléphone après nettoyage
-    //     Log::info('Numéro de téléphone après nettoyage : ' . $phoneNumber);
+        // Log du numéro de téléphone après nettoyage
+        Log::info('Numéro de téléphone après nettoyage : ' . $phoneNumber);
 
-    //     // Vérifier la longueur du numéro
-    //     if (strlen($phoneNumber) < 12) { // 221 + 9 chiffres = 12 caractères
-    //         Log::error('Numéro de téléphone invalide : ' . $phoneNumber);
-    //         return;
-    //     }
+        // Vérifier la longueur du numéro
+        if (strlen($phoneNumber) < 12) { // 221 + 9 chiffres = 12 caractères
+            Log::error('Numéro de téléphone invalide : ' . $phoneNumber);
+            return;
+        }
 
-    //     // Récupérer les identifiants depuis la configuration
-    //     $clientId = config('services.orange.client_id');
-    //     $clientSecret = config('services.orange.client_secret');
+        // Récupérer les identifiants depuis la configuration
+        $clientId = config('services.orange.client_id');
+        $clientSecret = config('services.orange.client_secret');
 
-    //     // Vérifier que les identifiants sont bien définis
-    //     if (empty($clientId) || empty($clientSecret)) {
-    //         Log::error('Client ID ou Client Secret non défini.');
-    //         return;
-    //     }
+        // Vérifier que les identifiants sont bien définis
+        if (empty($clientId) || empty($clientSecret)) {
+            Log::error('Client ID ou Client Secret non défini.');
+            return;
+        }
 
-    //     // Log des identifiants
-    //     Log::info('Client ID : ' . $clientId);
-    //     Log::info('Client Secret : ' . $clientSecret);
+        // Log des identifiants
+        Log::info('Client ID : ' . $clientId);
+        Log::info('Client Secret : ' . $clientSecret);
 
-    //     // Obtenir le token d'accès
-    //     $accessToken = $this->getAccessToken($clientId, $clientSecret);
+        // Obtenir le token d'accès
+        $accessToken = $this->getAccessToken($clientId, $clientSecret);
 
-    //     if (!$accessToken) {
-    //         Log::error('Erreur : Impossible de récupérer le token d\'accès.');
-    //         return;
-    //     }
+        if (!$accessToken) {
+            Log::error('Erreur : Impossible de récupérer le token d\'accès.');
+            return;
+        }
 
-    //     // Envoyer le SMS
-    //     $senderAddress = config('services.orange.sender_address');
+        // Envoyer le SMS
+        $senderAddress = config('services.orange.sender_address');
 
-    //     // Vérifier que le senderAddress commence par 'tel:'
-    //     if (strpos($senderAddress, 'tel:') !== 0) {
-    //         $senderAddress = 'tel:' . $senderAddress; // Ajouter le préfixe si absent
-    //     }
+        // Vérifier que le senderAddress commence par 'tel:'
+        if (strpos($senderAddress, 'tel:') !== 0) {
+            $senderAddress = 'tel:' . $senderAddress; // Ajouter le préfixe si absent
+        }
 
-    //     $url = 'https://api.orange.com/smsmessaging/v1/outbound/' . urlencode($senderAddress) . '/requests';
+        $url = 'https://api.orange.com/smsmessaging/v1/outbound/' . urlencode($senderAddress) . '/requests';
 
-    //     $data = [
-    //         'outboundSMSMessageRequest' => [
-    //             'address' => 'tel:+' . $phoneNumber,  // Format international complet
-    //             'outboundSMSTextMessage' => [
-    //                 'message' => $message,
-    //             ],
-    //             'senderAddress' => $senderAddress, // Utiliser le senderAddress formaté
-    //             // 'senderName' => "SMS 183786",
-    //             'senderName' => "DocTrack",
-    //         ]
-    //     ];
+        $data = [
+            'outboundSMSMessageRequest' => [
+                'address' => 'tel:+' . $phoneNumber,  // Format international complet
+                'outboundSMSTextMessage' => [
+                    'message' => $message,
+                ],
+                'senderAddress' => $senderAddress, // Utiliser le senderAddress formaté
+                // 'senderName' => "SMS 183786",
+                'senderName' => "DocTrack",
+            ]
+        ];
 
-    //     $ch = curl_init();
-    //     curl_setopt($ch, CURLOPT_URL, $url);
-    //     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    //     curl_setopt($ch, CURLOPT_POST, true);
-    //     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    //         'Authorization: Bearer ' . $accessToken,
-    //         'Content-Type: application/json',
-    //         'Accept: application/json',
-    //     ]);
-    //     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $accessToken,
+            'Content-Type: application/json',
+            'Accept: application/json',
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
 
-    //     $response = curl_exec($ch);
-    //     $error = curl_error($ch);
-    //     curl_close($ch);
+        $response = curl_exec($ch);
+        $error = curl_error($ch);
+        curl_close($ch);
 
-    //     if ($response === false) {
-    //         Log::error('Erreur lors de l\'envoi du SMS : ' . $error);
-    //         return;
-    //     }
+        if ($response === false) {
+            Log::error('Erreur lors de l\'envoi du SMS : ' . $error);
+            return;
+        }
 
-    //     $responseData = json_decode($response, true);
-    //     if (isset($responseData['outboundSMSMessageRequest'])) {
-    //         Log::info('SMS envoyé avec succès à ' . $phoneNumber);
-    //     } else {
-    //         Log::error('Erreur lors de l\'envoi du SMS : ' . $response);
-    //     }
-    // }
+        $responseData = json_decode($response, true);
+        if (isset($responseData['outboundSMSMessageRequest'])) {
+            Log::info('SMS envoyé avec succès à ' . $phoneNumber);
+        } else {
+            Log::error('Erreur lors de l\'envoi du SMS : ' . $response);
+        }
+    }
 
-    // // Méthode pour obtenir un jeton d'accès
-    // protected function getAccessToken($clientId, $clientSecret)
-    // {
-    //     $url = 'https://api.orange.com/oauth/v3/token';
+    // Méthode pour obtenir un jeton d'accès
+    protected function getAccessToken($clientId, $clientSecret)
+    {
+        $url = 'https://api.orange.com/oauth/v3/token';
 
-    //     // Log des identifiants et de l'en-tête d'autorisation
-    //     Log::info('Tentative d\'obtention du token avec les identifiants :', [
-    //         'clientId' => $clientId,
-    //         'clientSecret' => $clientSecret,
-    //         'authorizationHeader' => 'Basic ' . base64_encode($clientId . ':' . $clientSecret),
-    //     ]);
+        // Log des identifiants et de l'en-tête d'autorisation
+        Log::info('Tentative d\'obtention du token avec les identifiants :', [
+            'clientId' => $clientId,
+            'clientSecret' => $clientSecret,
+            'authorizationHeader' => 'Basic ' . base64_encode($clientId . ':' . $clientSecret),
+        ]);
 
-    //     $ch = curl_init();
-    //     curl_setopt($ch, CURLOPT_URL, $url);
-    //     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    //     curl_setopt($ch, CURLOPT_POST, true);
-    //     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    //         'Authorization: Basic ' . base64_encode($clientId . ':' . $clientSecret),
-    //         'Content-Type: application/x-www-form-urlencoded',
-    //         'Accept: application/json',
-    //     ]);
-    //     curl_setopt($ch, CURLOPT_POSTFIELDS, 'grant_type=client_credentials');
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Basic ' . base64_encode($clientId . ':' . $clientSecret),
+            'Content-Type: application/x-www-form-urlencoded',
+            'Accept: application/json',
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, 'grant_type=client_credentials');
 
-    //     $response = curl_exec($ch);
-    //     $error = curl_error($ch);
-    //     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE); // Récupère le code HTTP
-    //     curl_close($ch);
+        $response = curl_exec($ch);
+        $error = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE); // Récupère le code HTTP
+        curl_close($ch);
 
-    //     // Log de la réponse
-    //     Log::info('Réponse de l\'API Orange :', [
-    //         'http_code' => $httpCode,
-    //         'response' => $response,
-    //         'error' => $error,
-    //     ]);
+        // Log de la réponse
+        Log::info('Réponse de l\'API Orange :', [
+            'http_code' => $httpCode,
+            'response' => $response,
+            'error' => $error,
+        ]);
 
-    //     if ($response === false) {
-    //         Log::error('Erreur lors de l\'obtention du jeton d\'accès : ' . $error);
-    //         throw new \Exception('Erreur cURL : ' . $error);
-    //     }
+        if ($response === false) {
+            Log::error('Erreur lors de l\'obtention du jeton d\'accès : ' . $error);
+            throw new \Exception('Erreur cURL : ' . $error);
+        }
 
-    //     $data = json_decode($response, true);
-    //     if (isset($data['access_token'])) {
-    //         return $data['access_token'];
-    //     }
+        $data = json_decode($response, true);
+        if (isset($data['access_token'])) {
+            return $data['access_token'];
+        }
 
-    //     Log::error('Erreur lors de l\'obtention du jeton d\'accès : ' . $response);
-    //     throw new \Exception('Impossible d\'obtenir le jeton d\'accès');
-    // }
+        Log::error('Erreur lors de l\'obtention du jeton d\'accès : ' . $response);
+        throw new \Exception('Impossible d\'obtenir le jeton d\'accès');
+    }
 
-        /**
+    /**
      * Gérer la demande de restitution.
      */
-    public function requestRestitution($documentId)
+    public function requestRestitution($uuid)
     {
-        // Récupérer le document concerné
-        $document = Document::findOrFail($documentId);
+         // Récupérer le document concerné par son uuid
+         $document = Document::where('uuid', $uuid)->firstOrFail();
 
         // L'utilisateur connecté qui clique sur "Restituer"
         $fromUser = Auth::user();
@@ -446,7 +348,8 @@ public function getAllPublications(Request $request)
 
         // Vérifier si une demande de restitution pour ce document a déjà été faite par cet utilisateur
         $existingEmailLog = EmailLog::where('requester_user_id', $fromUser->id)
-            ->where('document_id', $documentId)
+            // ->where('document_id', $documentId)
+            ->where('document_id', $document->uuid) // Utilisation de uuid
             ->whereNotNull('publisher_user_id') // S'assurer qu'il s'agit bien d'une demande de restitution
             ->first();
 
@@ -465,55 +368,58 @@ public function getAllPublications(Request $request)
 
         // Envoyer la notification par SMS
         $phoneNumber = $toUser->Phone; // Assure-toi que le champ du numéro de téléphone est correct
-        $documentUrl = 'https://sendoctrack.netlify.app/document/' . $documentId; // URL pour afficher le document
-        $smsMessage = 'Bonjour, vous avez une demande de restitution pour le document : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
+        // $documentUrl = 'https://sendoctrack.netlify.app/document/' . $documentId; // URL pour afficher le document
+        $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->uuid; // Utilisation de uuid
+        $message = 'Bonjour, vous avez une demande de restitution pour le document : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
 
-        // Appeler la méthode sendSMS
-        $this->smsService->sendSms($phoneNumber, $smsMessage);
+         // Appel à la méthode pour l'envoi de SMS
+        $this->sendSMS($phoneNumber, $message);
+
         // Retourner une réponse JSON
         return response()->json(['message' => 'Demande de restitution envoyée avec succès.']);
     }
 
      /**
-     * Display the specified resource.
+     * Afficher le document specifique.
      */
-    public function show($id) {
-        $document = Document::with(['user', 'documentType'])->find($id); // Charge les détails de l'utilisateur associé
-        if (!$document) {
+    public function show($uuid) // Changé de $id à $uuid
+    {
+        $document = Document::with(['user', 'documentType'])->where('uuid', $uuid)->firstOrFail();
+                if (!$document) {
             return response()->json(['message' => 'Document not found'], 404);
         }
         return response()->json($document);
     }
 
-
     /**
-     * Update the specified resource in storage.
+     * Mise à jour de document
      */
-    public function update(UpdateDocumentRequest $request, Document $document)
+    public function update(UpdateDocumentRequest $request, $uuid) // Changé de Document $document à $uuid
     {
-        // Vérifiez si l'utilisateur authentifié est le propriétaire du document
+        $document = Document::where('uuid', $uuid)->firstOrFail();
+
         if (Auth::id() !== $document->user_id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Vous n\'êtes pas autorisé à mettre à jour ce document.'
-            ], 403); // Code 403 Forbidden
+            ], 403);
         }
 
-        // Met à jour le document avec les données validées
-        $validatedData = $request->validated(); // Valider la requête
-
-        // Mise à jour uniquement des champs présents dans la requête
+        $validatedData = $request->validated();
         $document->update($validatedData);
 
         return response()->json([
             'success' => true,
             'message' => 'Document mis à jour avec succès.',
-            'document' => $document // Retourner le document mis à jour
+            'document' => $document
         ]);
     }
 
 
-    public function destroy($id)
+    /**
+     * Suppression de suppression de document
+     */
+    public function destroy($uuid) // Changé de $id à $uuid
     {
         $user = Auth::user();
 
@@ -521,14 +427,13 @@ public function getAllPublications(Request $request)
             return response()->json([
                 'success' => false,
                 'message' => 'Vous devez être authentifié pour effectuer cette action.'
-            ], 401); // Code 401 Unauthorized
+            ], 401);
         }
 
-        $document = Document::findOrFail($id);
+        $document = Document::findOrFail($uuid); // À ajuster pour utiliser where('uuid', $uuid)
 
-        // Si l'utilisateur est un simple utilisateur, vérifier qu'il est propriétaire de la publication
         if ($user->hasRole('Admin') || $document->user_id === $user->id) {
-            $document->delete(); // Ceci marque le document comme supprimé (soft delete)
+            $document->delete();
             return response()->json([
                 'success' => true,
                 'message' => 'Publication supprimée avec succès.'
@@ -541,23 +446,23 @@ public function getAllPublications(Request $request)
         ], 403);
     }
 
-    public function restoreTrashedDocument($id)
+
+    // Fonction de la restauration d'un document supprimé
+    public function restoreTrashedDocument($uuid) // Changé de $id à $uuid
     {
-        $user = Auth::user(); // Récupérer l'utilisateur authentifié
+        $user = Auth::user();
 
         if (!$user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Vous devez être authentifié pour effectuer cette action.'
-            ], 401); // Code 401 Unauthorized
+            ], 401);
         }
 
-        // Trouver le document même s'il est soft deleted
-        $document = Document::onlyTrashed()->findOrFail($id);
+        $document = Document::onlyTrashed()->where('uuid', $uuid)->firstOrFail();
 
-        // Vérifier si l'utilisateur est le propriétaire du document
         if ($document->user_id === $user->id) {
-            $document->restore(); // Restaurer le document soft deleted
+            $document->restore();
             return response()->json([
                 'success' => true,
                 'message' => 'Document restauré avec succès.'
@@ -571,7 +476,7 @@ public function getAllPublications(Request $request)
     }
 
 
-
+    // Fonction pour obtenir la liste des documents supprimés
     public function trashedDocuments()
     {
         $user = Auth::user(); // Récupérer l'utilisateur authentifié
@@ -595,6 +500,7 @@ public function getAllPublications(Request $request)
         ]);
     }
 
+    // Fonction pour obtenir uniquement les documents de l'utilisateur connecté
     public function OwnPub()
     {
         // Récupère uniquement les documents de l'utilisateur connecté
@@ -603,6 +509,7 @@ public function getAllPublications(Request $request)
         // Retourne les documents en JSON, y compris les informations de l'utilisateur
         return response()->json($documents);
     }
+
 
     // Fonction pour obtenir uniquement les documents supprimés
     public function getDeletedDocuments()
@@ -622,6 +529,7 @@ public function getAllPublications(Request $request)
 
         return response()->json($documents);
     }
+
 
     // Fonction pour obtenir les documents dont le statut est "récupéré"
     public function getRecoveredDocuments()
@@ -669,7 +577,7 @@ public function getAllPublications(Request $request)
     }
 
 
-
+    // Fonction pour obtenir les publications par type
     public function getPublicationsByType()
     {
         $publications = Document::select('document_type_id', DB::raw('count(*) as count'))
@@ -687,6 +595,7 @@ public function getAllPublications(Request $request)
         ]);
     }
 
+    // Fonction pour obtenir les données de restitution
     public function getRestitutionData()
     {
         $restitutionCount = EmailLog::where('subject', 'LIKE', '%Demande de restitution%')->count();
@@ -698,6 +607,7 @@ public function getAllPublications(Request $request)
         ]);
     }
 
+    // Fonction pour obtenir les données d'activité des emails
     public function getEmailActivity()
     {
         // Compte le nombre d'emails envoyés par sujet
@@ -710,7 +620,7 @@ public function getAllPublications(Request $request)
 
 
     /**
-     * Get statistics of declarations and publications by date.
+     * Fonction pour obtenir les statistiques de publications et déclarations de perte par mois
      */
     public function getStatistics()
     {
@@ -741,6 +651,7 @@ public function getAllPublications(Request $request)
         return response()->json(['data' => $data]);
     }
 
+    // Fonction pour obtenir les statistiques de publications et déclarations de perte par type de document
     public function getDocumentStatusCountWithTrashed(Request $request)
     {
         // Vérifie si l'utilisateur est connecté
@@ -765,6 +676,7 @@ public function getAllPublications(Request $request)
         }
     }
 
+    // Fonction pour obtenir les coordonnées d'une ville
     public function getCoordinates($location)
     {
         // Vérifie si les coordonnées sont déjà dans le cache
@@ -805,6 +717,35 @@ public function getAllPublications(Request $request)
             ];
         }
     }
+
+     // Méthode pour récupérer les publications et leurs coordonnées
+     public function getPublicationsByLocation()
+        {
+            $localities = Document::distinct()->pluck('Location');
+
+            $regions = $localities->map(function($location) {
+                // Vérifie ou génère les coordonnées
+                $coords = $this->getCoordinates($location);
+
+                return [
+                    'name' => $location,
+                    'latitude' => $coords['latitude'],
+                    'longitude' => $coords['longitude'],
+                ];
+            });
+
+            $publications = Document::select('Location', DB::raw('COUNT(*) as publications'))
+                            ->groupBy('Location')
+                            ->get()
+                            ->keyBy('Location');
+
+            $regions = $regions->map(function($region) use ($publications) {
+                $region['publications'] = $publications[$region['name']]->publications ?? 0;
+                return $region;
+            });
+
+            return response()->json($regions);
+     }
 
 //     public function getCoordinates($location)
 // {
@@ -882,36 +823,6 @@ public function getAllPublications(Request $request)
 //         ];
 //     }
 // }
-
-
-    // Méthode pour récupérer les publications et leurs coordonnées
-    public function getPublicationsByLocation()
-    {
-        $localities = Document::distinct()->pluck('Location');
-
-        $regions = $localities->map(function($location) {
-            // Vérifie ou génère les coordonnées
-            $coords = $this->getCoordinates($location);
-
-            return [
-                'name' => $location,
-                'latitude' => $coords['latitude'],
-                'longitude' => $coords['longitude'],
-            ];
-        });
-
-        $publications = Document::select('Location', DB::raw('COUNT(*) as publications'))
-                        ->groupBy('Location')
-                        ->get()
-                        ->keyBy('Location');
-
-        $regions = $regions->map(function($region) use ($publications) {
-            $region['publications'] = $publications[$region['name']]->publications ?? 0;
-            return $region;
-        });
-
-        return response()->json($regions);
-    }
 
 
 

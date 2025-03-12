@@ -14,12 +14,14 @@ class FoundDocumentNotification extends Mailable
     use Queueable, SerializesModels;
 
     public $finderPhone;
+    public $document;
     /**
      * Create a new message instance.
      */
-    public function __construct($finderPhone)
+    public function __construct($finderPhone,$document)
     {
         $this->finderPhone = $finderPhone;
+        $this->document = $document;
     }
 
     /**
@@ -29,8 +31,8 @@ class FoundDocumentNotification extends Mailable
     public function build()
     {
         return $this->subject('Votre document a été trouvé')
-                    ->view('emails.found_document')
-                    ->with(['finderPhone' => $this->finderPhone]);
+                    ->markdown('emails.document.found_document')
+                    ->with(['finderPhone' => $this->finderPhone, 'document' => $this->document,]);
     }
 
     /**
@@ -39,27 +41,7 @@ class FoundDocumentNotification extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Found Document Notification',
+            subject: 'Document Trouvé',
         );
-    }
-
-    /**
-     * Get the message content definition.
-     */
-    public function content(): Content
-    {
-        return new Content(
-            view: 'view.name',
-        );
-    }
-
-    /**
-     * Get the attachments for the message.
-     *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
-     */
-    public function attachments(): array
-    {
-        return [];
     }
 }

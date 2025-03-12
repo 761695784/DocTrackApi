@@ -9,7 +9,7 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up()
+    public function up(): void
     {
         Schema::create('email_logs', function (Blueprint $table) {
             $table->id();
@@ -17,6 +17,10 @@ return new class extends Migration
             $table->string('to'); // Destinataire
             $table->string('subject'); // Objet de l'email
             $table->text('body'); // Contenu de l'email
+            $table->foreignId('publisher_user_id')->nullable()->constrained('users')->onDelete('cascade');
+            $table->foreignId('requester_user_id')->nullable()->constrained('users')->onDelete('cascade');
+            $table->foreignId('declarant_user_id')->nullable()->constrained('users')->onDelete('cascade');
+            $table->string('document_id')->nullable(); // Nouvelle colonne
             $table->timestamps();
         });
     }

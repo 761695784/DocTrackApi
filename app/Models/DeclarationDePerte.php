@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Database\Eloquent\Model;
 use App\Mail\DocumentPublishedNotification;
@@ -30,5 +31,14 @@ class DeclarationDePerte extends Model
 
         // Envoyer le mail avec le document et le numéro de téléPhone
         Mail::to($user->email)->send(new DocumentPublishedNotification($document, $Phone, $documentUrl));
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            $model->uuid = (string) Str::uuid();
+        });
     }
 }
