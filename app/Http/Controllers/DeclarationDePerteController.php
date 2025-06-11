@@ -41,10 +41,10 @@ class DeclarationDePerteController extends Controller
             'user_id' => $user->id,
         ]);
         // Création d'une notification
-        Notification::create([
-            'message' => 'Nouvelle déclaration de perte créée : ' . $declaration->Title . ' ' . $declaration->FirstNameInDoc . ' ' . $declaration->LastNameInDoc,
-            'is_read' => false,
-        ]);
+        // Notification::create([
+        //     'message' => 'Nouvelle déclaration de perte créée : ' . $declaration->Title . ' ' . $declaration->FirstNameInDoc . ' ' . $declaration->LastNameInDoc,
+        //     'is_read' => false,
+        // ]);
         // Recherche des documents correspondants
         $matchingDocuments = Document::where('document_type_id', $validatedData['document_type_id'])
             ->whereRaw('LOWER(OwnerFirstName) = LOWER(?)', [$validatedData['FirstNameInDoc']])
@@ -88,7 +88,7 @@ class DeclarationDePerteController extends Controller
                 'from' => config('mail.from.address'),
                 'to' => $user->email,
                 'subject' => 'Correspondance à votre déclaration de perte',
-                'body' => 'Le document publié correspondant aux informations : ' .
+                'body' => 'Le document publié correspond aux informations : ' .
                           $document->OwnerFirstName . ' ' . $document->OwnerLastName .
                           ' avec le numéro du publicateur : ' . $Phone,
                 'publisher_user_id' => $document->user->id,

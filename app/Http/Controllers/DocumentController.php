@@ -31,7 +31,7 @@ class DocumentController extends Controller
 {
     use SoftDeletes;
     /**
-     * Afficher tous les documents 
+     * Afficher tous les documents
      */
     public function index()
     {
@@ -116,10 +116,10 @@ class DocumentController extends Controller
         $document->save();
 
         // Notifier l'admin
-        Notification::create([
-            'message' => 'Un nouveau document a été publié : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
-            'is_read' => false,
-        ]);
+        // Notification::create([
+        //     'message' => 'Un nouveau document a été publié : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
+        //     'is_read' => false,
+        // ]);
 
         // Recherche des déclarations correspondantes
         $declarations = DeclarationDePerte::whereRaw('LOWER(FirstNameInDoc) = ?', [strtolower($document->OwnerFirstName)])
@@ -676,44 +676,72 @@ class DocumentController extends Controller
         }
     }
 
-    // Fonction pour obtenir les coordonnées d'une ville
-    public function getCoordinates($location)
+
+     /**
+     * Fonction pour obtenir les coordonnées d'une ville
+     */
+    private const CACHE_TTL_SECONDS = 172800; //Durée de mise en cache des coordonnées (48 heures en secondes)
+    private const OPENCAGE_API_URL = 'https://api.opencagedata.com/geocode/v1/json'; // URL de l'API OpenCage Geocoding.
+
+    /**
+     * Récupère les coordonnées géographiques (latitude, longitude) d'une localité.
+     *
+     * @param string $location Nom de la localité (ex. "Dakar")
+     * @return array Tableau contenant latitude, longitude et un message d'erreur éventuel
+     */
+    public function getCoordinates(string $location): array
     {
-        // Vérifie si les coordonnées sont déjà dans le cache
-        $cacheKey = 'coordinates_' . $location;
+        $cacheKey = "coordinates_{$location}";
+
+        // Vérifier le cache
         if (Cache::has($cacheKey)) {
-            return Cache::get($cacheKey);
+            $coordinates = Cache::get($cacheKey);
+            // Log::info("Coordinates retrieved from cache for {$location}", $coordinates);
+            return $coordinates;
         }
 
-        $client = new Client();
-        $url = 'https://api.opencagedata.com/geocode/v1/json'; // Limites gratuites : Jusqu'à 2 500 requêtes par jour.
+        // Ajouter le contexte géographique (Sénégal)
+        $queryLocation = "{$location}, Senegal";
 
         try {
-            $response = $client->get($url, [
+            $client = new Client();
+            $response = $client->get(self::OPENCAGE_API_URL, [
                 'query' => [
-                    'q' => $location,
-                    'key' => '39195082031d4014b230dcb3433133b3', //  clé API OpenCage
-                    'countrycode' => 'SN', // Code pays pour restreindre la recherche au Sénégal
-                    'limit' => 1 // Limite le nombre de résultats
-                ]
+                    'q' => $queryLocation,
+                    'key' => config('services.opencage.api_key'),
+                    'countrycode' => 'SN',
+                    'limit' => 1,
+                ],
             ]);
 
             $data = json_decode($response->getBody(), true);
+            // Log::info("OpenCage API response for {$queryLocation}", $data);
 
-            $coordinates = [
-                'latitude' => $data['results'][0]['geometry']['lat'] ?? null,
-                'longitude' => $data['results'][0]['geometry']['lng'] ?? null
-            ];
+            if (!empty($data['results'])) {
+                $coordinates = [
+                    'latitude' => $data['results'][0]['geometry']['lat'] ?? null,
+                    'longitude' => $data['results'][0]['geometry']['lng'] ?? null,
+                ];
 
-            // Mettre les coordonnées dans le cache pour une durée de 48 heures
-            Cache::put($cacheKey, $coordinates, 172800);
+                // Mettre en cache les coordonnées
+                Cache::put($cacheKey, $coordinates, self::CACHE_TTL_SECONDS);
+                // Log::info("Coordinates cached for {$queryLocation}", $coordinates);
 
-            return $coordinates;
-        } catch (\Exception $e) {
+                return $coordinates;
+            }
+
+            // Log::warning("No geocoding results found for {$queryLocation}");
             return [
                 'latitude' => null,
                 'longitude' => null,
-                'error' => 'Erreur lors de la récupération des coordonnées.'
+                'error' => 'No results found for the location.',
+            ];
+        } catch (\Exception $e) {
+            // Log::error("Error fetching coordinates for {$queryLocation}: {$e->getMessage()}");
+            return [
+                'latitude' => null,
+                'longitude' => null,
+                'error' => "Failed to fetch coordinates: {$e->getMessage()}",
             ];
         }
     }
