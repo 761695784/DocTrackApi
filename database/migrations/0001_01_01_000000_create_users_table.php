@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('Adress');                    // Note : "Adress" est conservé tel quel bien que "Address" soit plus correct
             $table->string('Phone');
             $table->string('email')->unique();
+            $table->string('email_verification_code')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();

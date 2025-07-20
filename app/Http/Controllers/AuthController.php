@@ -49,6 +49,8 @@ class AuthController extends Controller
         $expirationDate = now()->addYear(); // Valable 1 an
         // $expirationDate = now()->addMinutes(3);  // QR Code valable pour 3 minutes pour tester
 
+        // Générer un code à 6 chiffres pour Verification de la veracité de l'existence de l'email
+        $email_verification_code = random_int(100000, 999999);
         // Création de l'utilisateur
         $user = User::create([
             'FirstName' => $request->FirstName,
@@ -59,7 +61,14 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'qr_code_token' => $qrCodeToken,
             'qr_code_expires_at' => $expirationDate,
+            'email_verification_code' => $email_verification_code,
         ]);
+        // Envoi du code de verification par mail
+        Mail::raw("Bienvenue sur DocTrack ! Votre code de vérification est : {$email_verification_code}", function ($message) use ($user) {
+            $message->to($user->email)
+                ->subject('Vérification de votre adresse email');
+        });
+
 
         // Assignation du rôle SimpleUser par défaut
         $user->assignRole('SimpleUser');
@@ -118,7 +127,22 @@ class AuthController extends Controller
             }
         }
 
+        // Récupérer les données de connexion
         $credentials = $request->only('email', 'password');
+        // Vérifier si l'utilisateur a verifié son email
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json([
+                'message' => 'Utilisateur introuvable.'
+            ], 404);
+        }
+
+        // Vérifier si l'utilisateur a verifié son email except si il a le rôle 'Admin'
+        if (is_null($user->email_verified_at) && !$user->hasRole('Admin')) {
+            return response()->json([
+                'message' => 'Email non vérifié.'
+            ], 403);
+        }
 
         // Tentative de connexion avec JWT
         if (!$token = JWTAuth::attempt($credentials)) {

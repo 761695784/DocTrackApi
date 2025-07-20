@@ -15,11 +15,11 @@ class UserSeeder extends Seeder
     {
         // // Création d'un utilisateur admin
         $user = User::create([
-            'FirstName' => 'Saliou',
-            'LastName' => 'TALLA',
+            'FirstName' => 'Malcom',
+            'LastName' => 'Marna',
             'Adress' => 'Dakar',
-            'Phone' => '123456789',
-            'email' => 'salioutalla@gmail.com',
+            'Phone' => '+221761695784',
+            'email' => 'malcom70976@gmail.com',
             'password' => Hash::make('adminpassword'),
         ]);
 
@@ -32,50 +32,19 @@ class UserSeeder extends Seeder
                 'FirstName' => 'Malang',
                 'LastName' => 'Marna',
                 'Adress' => 'Dakar',
-                'Phone' => '771234567',
-                'email' => 'Malang@gmail.com',
+                'Phone' => '+221709764709',
+                'email' => 'malangmarna2018@gmail.com',
                 'password' => Hash::make('password123')
             ],
             [
-                'FirstName' => 'Aliou',
-                'LastName' => 'Diallo',
+                'FirstName' => 'Elisa',
+                'LastName' => 'Leye',
                 'Adress' => 'Dakar',
-                'Phone' => '771234567',
-                'email' => 'aliou.diallo@example.com',
+                'Phone' => '+221762956580',
+                'email' => 'majeli061@gmail.com',
                 'password' => Hash::make('password1')
             ],
-            [
-                'FirstName' => 'Awa',
-                'LastName' => 'Diop',
-                'Adress' => 'Thies',
-                'Phone' => '778765432',
-                'email' => 'awa.diop@example.com',
-                'password' => Hash::make('password2')
-            ],
-            [
-                'FirstName' => 'Moussa',
-                'LastName' => 'Sow',
-                'Adress' => 'Kaolack',
-                'Phone' => '770123456',
-                'email' => 'moussa.sow@example.com',
-                'password' => Hash::make('password3')
-            ],
-            [
-                'FirstName' => 'Fatou',
-                'LastName' => 'Ndiaye',
-                'Adress' => 'Saint-Louis',
-                'Phone' => '779876543',
-                'email' => 'fatou.ndiaye@example.com',
-                'password' => Hash::make('password4')
-            ],
-            [
-                'FirstName' => 'Boubacar',
-                'LastName' => 'Ba',
-                'Adress' => 'Ziguinchor',
-                'Phone' => '778654321',
-                'email' => 'boubacar.ba@example.com',
-                'password' => Hash::make('password5')
-            ],
+
         ];
 
         //  Créer les utilisateurs et leur assigner le rôle SimpleUser
