@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Password;
 use Laravel\Socialite\Facades\Socialite;
@@ -22,68 +23,6 @@ class AuthController extends Controller
     /**
      * Inscription d'un utilisateur
      */
-    // public function register(Request $request)
-    // {
-    //     // Validation des données
-    //     $validator = Validator::make($request->all(), [
-    //         'FirstName' => 'required|string|max:40',
-    //         'LastName' => 'required|string|max:20',
-    //         'Adress' => 'required|string|max:100',
-    //         'Phone' => 'required|string|max:20',
-    //         'email' => 'required|string|email|max:50|unique:users',
-    //         'password' => 'required|string|min:8|confirmed',
-    //     ]);
-
-    //     // Gestion des erreurs de validation
-    //     if ($validator->fails()) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Échec de l\'inscription. Veuillez vérifier les erreurs ci-dessous.',
-    //             'errors' => $validator->errors()
-    //         ], 422);
-    //     }
-
-    //     // Générer un token unique pour le QR code
-    //     $qrCodeToken = Str::random(32); // Token aléatoire de 32 caractères
-    //     $expirationDate = now()->addYear(); // Valable 1 an
-
-
-    //     // Création de l'utilisateur
-    //     $user = User::create([
-    //         'FirstName' => $request->FirstName,
-    //         'LastName' => $request->LastName,
-    //         'Adress' => $request->Adress,
-    //         'Phone' => $request->Phone,
-    //         'email' => $request->email,
-    //         'password' => Hash::make($request->password),
-    //         'qr_code_token' => $qrCodeToken,
-    //         'qr_code_expires_at' => $expirationDate,
-    //     ]);
-
-    //     // Assignation du rôle SimpleUser par défaut
-    //     $user->assignRole('SimpleUser');
-
-    //     // Générer le QR code (URL publique vers une page de soumission)
-    //     $qrCodeUrl = "https://sendoctrack.netlify.app/found-qr?token=" . $qrCodeToken;
-    //     $qrCodeImage = QrCode::format('png')->size(200)->generate($qrCodeUrl);
-
-    //     // Sauvegarder le QR code dans le stockage public
-    //     $fileName = 'qr_codes/' . $user->id . '_qr.png';
-    //     Storage::disk('public')->put($fileName, $qrCodeImage);
-
-    //     // Génération du token JWT
-    //     $token = JWTAuth::fromUser($user);
-
-    //     // Retourner un message de succès
-    //     return response()->json([
-    //         'success' => true,
-    //         'message' => 'Inscription réussie ! Bienvenue sur la plateforme.',
-    //         'user' => $user,
-    //         'token' => $token,
-    //         'qr_code_url' => Storage::url($fileName) // URL publique du QR code
-    //     ], 201);
-    // }
-
     public function register(Request $request)
     {
         // Validation des données
@@ -150,30 +89,65 @@ class AuthController extends Controller
     /**
      * Connexion d'un utilisateur
      */
-    public function login(Request $request)
+      public function login(Request $request)
     {
+        // Identifier unique pour suivre les tentatives (par email ou IP)
+        $identifier = $request->input('email') ?? $request->ip();
+
+        // Clé de cache pour stocker les tentatives
+        $cacheKey = "login_attempts_{$identifier}";
+
+        // Récupérer le nombre de tentatives actuelles
+        $attempts = Cache::get($cacheKey, 0);
+        $lastAttempt = Cache::get("last_attempt_{$identifier}");
+
+        // Vérifier si l'utilisateur est bloqué (5 tentatives atteintes)
+        if ($attempts >= 5) {
+            $lockoutTime = now()->addMinutes(5); // Bloquer pendant 5 minutes
+            if (!$lastAttempt || now()->lessThan($lockoutTime)) {
+                $remainingTime = now()->diffInSeconds($lockoutTime);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Trop de tentatives. Veuillez attendre ' . $remainingTime . ' secondes avant de réessayer.'
+                ], 429); // 429 Too Many Requests
+            } else {
+                // Réinitialiser les tentatives si le délai est écoulé
+                Cache::forget($cacheKey);
+                Cache::forget("last_attempt_{$identifier}");
+                $attempts = 0;
+            }
+        }
+
         $credentials = $request->only('email', 'password');
 
         // Tentative de connexion avec JWT
         if (!$token = JWTAuth::attempt($credentials)) {
+            // Incrémenter les tentatives en cas d'échec
+            Cache::put($cacheKey, $attempts + 1, 1440); // Stocke pendant 24h (1440 minutes)
+            Cache::put("last_attempt_{$identifier}", now(), 1440); // Stocke l'heure de la dernière tentative
+
             return response()->json([
                 'success' => false,
-                'message' => 'Vos identifiants sont invalides. Veuillez réessayer.'
+                'message' => 'Vos identifiants sont invalides. Veuillez réessayer. Tentatives restantes : ' . (5 - ($attempts + 1))
             ], 401);
         }
+
+        // Connexion réussie : réinitialiser les tentatives
+        Cache::forget($cacheKey);
+        Cache::forget("last_attempt_{$identifier}");
+
         $user = Auth::user();
         $roles = $user->getRoleNames(); // Récupérer le rôle
 
         // Connexion réussie
         return response()->json([
             'success' => true,
-            'message' => 'Connexion réussie  !',
+            'message' => 'Connexion réussie !',
             'user' => $user,
             'token' => $token,
             'roles' => $roles // Retourner le ou les rôles de l'utilisateur
         ], 200);
     }
-
     /**
      * Déconnexion de l'utilisateur (invalidation du token)
      */
