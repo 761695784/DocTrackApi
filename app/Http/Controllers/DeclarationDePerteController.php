@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Mail;
 use Spatie\Permission\Traits\HasRoles;
 use App\Mail\DocumentPublishedNotification;
 use App\Http\Requests\StoreDeclarationDePerteRequest;
+use App\Services\CertificatDePerteService;
+
 
 class DeclarationDePerteController extends Controller
 {
@@ -20,7 +22,7 @@ class DeclarationDePerteController extends Controller
     /**
      * Creer une nouvelle declaration de perte
      */
-    public function store(StoreDeclarationDePerteRequest $request)
+    public function store(StoreDeclarationDePerteRequest $request, CertificatDePerteService $certificatService)
     {
         // Vérifier si l'utilisateur est authentifié
         $user = Auth::user();
@@ -40,6 +42,10 @@ class DeclarationDePerteController extends Controller
             'document_type_id' => $validatedData['document_type_id'],
             'user_id' => $user->id,
         ]);
+
+        // Générer automatiquement le certificat
+        $certificat = $certificatService->genererCertificat($declaration);
+
         // Création d'une notification
         // Notification::create([
         //     'message' => 'Nouvelle déclaration de perte créée : ' . $declaration->Title . ' ' . $declaration->FirstNameInDoc . ' ' . $declaration->LastNameInDoc,
@@ -68,7 +74,11 @@ class DeclarationDePerteController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Déclaration de perte créée avec succès.',
-            'data' => $declaration
+            'data' => [
+                    'declaration' => $declaration,
+                    'certificat' => $certificat,
+                    'pdf_url' => asset('storage/' . $certificat->pdf_path)
+        ]
         ], 201);
     }
 
