@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Password;
 use Laravel\Socialite\Facades\Socialite;
@@ -48,6 +49,8 @@ class AuthController extends Controller
         $expirationDate = now()->addYear(); // Valable 1 an
         // $expirationDate = now()->addMinutes(3);  // QR Code valable pour 3 minutes pour tester
 
+        // Générer un code à 6 chiffres pour Verification de la veracité de l'existence de l'email
+        $email_verification_code = random_int(100000, 999999);
         // Création de l'utilisateur
         $user = User::create([
             'FirstName' => $request->FirstName,
@@ -58,7 +61,14 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'qr_code_token' => $qrCodeToken,
             'qr_code_expires_at' => $expirationDate,
+            'email_verification_code' => $email_verification_code,
         ]);
+        // Envoi du code de verification par mail
+        Mail::raw("Bienvenue sur DocTrack ! Votre code de vérification est : {$email_verification_code}", function ($message) use ($user) {
+            $message->to($user->email)
+                ->subject('Vérification de votre adresse email');
+        });
+
 
         // Assignation du rôle SimpleUser par défaut
         $user->assignRole('SimpleUser');
@@ -88,30 +98,80 @@ class AuthController extends Controller
     /**
      * Connexion d'un utilisateur
      */
-    public function login(Request $request)
+      public function login(Request $request)
     {
+        // Identifier unique pour suivre les tentatives (par email ou IP)
+        $identifier = $request->input('email') ?? $request->ip();
+
+        // Clé de cache pour stocker les tentatives
+        $cacheKey = "login_attempts_{$identifier}";
+
+        // Récupérer le nombre de tentatives actuelles
+        $attempts = Cache::get($cacheKey, 0);
+        $lastAttempt = Cache::get("last_attempt_{$identifier}");
+
+        // Vérifier si l'utilisateur est bloqué (5 tentatives atteintes)
+        if ($attempts >= 5) {
+            $lockoutTime = now()->addMinutes(5); // Bloquer pendant 5 minutes
+            if (!$lastAttempt || now()->lessThan($lockoutTime)) {
+                $remainingTime = now()->diffInSeconds($lockoutTime);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Trop de tentatives. Veuillez attendre ' . $remainingTime . ' secondes avant de réessayer.'
+                ], 429); // 429 Too Many Requests
+            } else {
+                // Réinitialiser les tentatives si le délai est écoulé
+                Cache::forget($cacheKey);
+                Cache::forget("last_attempt_{$identifier}");
+                $attempts = 0;
+            }
+        }
+
+        // Récupérer les données de connexion
         $credentials = $request->only('email', 'password');
+        // Vérifier si l'utilisateur a verifié son email
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json([
+                'message' => 'Utilisateur introuvable.'
+            ], 404);
+        }
+
+        // Vérifier si l'utilisateur a verifié son email except si il a le rôle 'Admin'
+        if (is_null($user->email_verified_at) && !$user->hasRole('Admin')) {
+            return response()->json([
+                'message' => 'Email non vérifié.'
+            ], 403);
+        }
 
         // Tentative de connexion avec JWT
         if (!$token = JWTAuth::attempt($credentials)) {
+            // Incrémenter les tentatives en cas d'échec
+            Cache::put($cacheKey, $attempts + 1, 1440); // Stocke pendant 24h (1440 minutes)
+            Cache::put("last_attempt_{$identifier}", now(), 1440); // Stocke l'heure de la dernière tentative
+
             return response()->json([
                 'success' => false,
-                'message' => 'Vos identifiants sont invalides. Veuillez réessayer.'
+                'message' => 'Vos identifiants sont invalides. Veuillez réessayer. Tentatives restantes : ' . (5 - ($attempts + 1))
             ], 401);
         }
+
+        // Connexion réussie : réinitialiser les tentatives
+        Cache::forget($cacheKey);
+        Cache::forget("last_attempt_{$identifier}");
+
         $user = Auth::user();
         $roles = $user->getRoleNames(); // Récupérer le rôle
 
         // Connexion réussie
         return response()->json([
             'success' => true,
-            'message' => 'Connexion réussie  !',
+            'message' => 'Connexion réussie !',
             'user' => $user,
             'token' => $token,
             'roles' => $roles // Retourner le ou les rôles de l'utilisateur
         ], 200);
     }
-
     /**
      * Déconnexion de l'utilisateur (invalidation du token)
      */
