@@ -2,6 +2,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CertificatDePerteController;
 use App\Http\Controllers\QrCodeController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\CommentaireController;
@@ -83,6 +84,10 @@ Route::post('reset-password', [AuthController::class, 'resetPassword']);
 Route::post('/auth/google/callback', [AuthController::class, 'handleGoogleLogin']);
 Route::post('/auth/google/finalize-account-creation', [AuthController::class, 'finalizeAccountCreation']);
 Route::post('/found-qr', [QrCodeController::class, 'handleFoundQr']);
+Route::post('/certificats/{id}/telecharger', [CertificatDePerteController::class, 'telecharger']);
+Route::get('/admin/certificats', [CertificatDePerteController::class, 'index']);
+Route::get('/my-certificats', [CertificatDePerteController::class ,'mesCertificats']);
+
 
 // Routes publiques pour les documents (lecture seule)
 Route::get('documents', [DocumentController::class, 'index']);
