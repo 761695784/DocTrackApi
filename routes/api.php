@@ -60,7 +60,8 @@ Route::middleware('auth:api')->group(function () {
 
     // Routes pour les déclarations de perte
     // Route::apiResource('declarations', DeclarationDePerteController::class);
-    Route::post('declarations', [DeclarationDePerteController::class,'store','index']);
+    Route::post('declarations', [DeclarationDePerteController::class,'store']);
+    Route::get('declarations', [DeclarationDePerteController::class, 'index']);
     Route::get('declarations/{slug}', [DeclarationDePerteController::class, 'show']);
     Route::delete('declarations/{slug}', [DeclarationDePerteController::class, 'destroy']);
     Route::get('trashed-declarations', [DeclarationDePerteController::class, 'trashedDeclarations']);
@@ -80,7 +81,7 @@ Route::middleware('auth:api')->group(function () {
     Route::get('new-notifications', [NotificationController::class, 'getNewNotifications']);
     Route::get('restitution-count', [NotificationController::class, 'getRestitutionRequestCount']);
 
-    // Autres routes protégées
+    // Autres routes protégées for admin
     Route::get('all-publications', [DocumentController::class, 'getAllPublications']);
     Route::get('publications-by-type', [DocumentController::class, 'getPublicationsByType']);
     Route::get('restitution-data', [DocumentController::class, 'getRestitutionData']);
