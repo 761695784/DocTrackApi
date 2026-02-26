@@ -1,13 +1,12 @@
 /.phpunit.cache
 /node_modules
-/public/build
-/public/hot
-/public/storage
-/storage/*.key
 /vendor
+<<<<<<< HEAD
 /.env
 .env.backup
 .env.production
+=======
+>>>>>>> 4f2f4c70b755edc36aedac9fafb290682777d820
 .phpunit.result.cache
 Homestead.json
 Homestead.yaml

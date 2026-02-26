@@ -41,4 +41,10 @@ class DeclarationDePerte extends Model
             $model->uuid = (string) Str::uuid();
         });
     }
+
+    public function certificat()
+{
+    return $this->hasOne(CertificatDePerte::class);
+}
+
 }

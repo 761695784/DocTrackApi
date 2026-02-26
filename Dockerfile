@@ -29,6 +29,8 @@ RUN composer require php-open-source-saver/jwt-auth
 
 RUN composer require laravel/octane
 
+RUN composer require barryvdh/laravel-dompdf
+
 RUN composer require spiral/roadrunner
 
 RUN chown -R www-data:www-data /app
@@ -39,6 +41,7 @@ RUN php artisan storage:link
 CMD php artisan vendor:publish --provider="PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider" && \
     php artisan octane:install && \
     php artisan vendor:publish --provider="Spiral\RoadRunner\RoadRunnerServiceProvider" && \
+    php artisan vendor:publish --provider="Barryvdh\DomPDF\ServiceProvider" && \
     php artisan key:generate && \
     php artisan migrate:refresh && \
     php artisan db:seed --class=RolesAndPermissionsSeeder && \

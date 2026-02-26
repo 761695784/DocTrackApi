@@ -2,6 +2,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CertificatDePerteController;
 use App\Http\Controllers\QrCodeController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\CommentaireController;
@@ -18,6 +19,10 @@ Route::post('reset-password', [AuthController::class, 'resetPassword']);
 Route::post('/auth/google/callback', [AuthController::class, 'handleGoogleLogin']);
 Route::post('/auth/google/finalize-account-creation', [AuthController::class, 'finalizeAccountCreation']);
 Route::post('/found-qr', [QrCodeController::class, 'handleFoundQr']);
+
+Route::post('/certificats/{id}/telecharger', [CertificatDePerteController::class, 'telecharger']);
+Route::get('/admin/certificats', [CertificatDePerteController::class, 'index']);
+Route::get('/my-certificats', [CertificatDePerteController::class ,'mesCertificats']);
 Route::post('/verify-email', [EmailVerificationController::class, 'verify']);
 
 
@@ -55,7 +60,8 @@ Route::middleware('auth:api')->group(function () {
 
     // Routes pour les déclarations de perte
     // Route::apiResource('declarations', DeclarationDePerteController::class);
-    Route::post('declarations', [DeclarationDePerteController::class,'store','index']);
+    Route::post('declarations', [DeclarationDePerteController::class,'store']);
+    Route::get('declarations', [DeclarationDePerteController::class, 'index']);
     Route::get('declarations/{slug}', [DeclarationDePerteController::class, 'show']);
     Route::delete('declarations/{slug}', [DeclarationDePerteController::class, 'destroy']);
     Route::get('trashed-declarations', [DeclarationDePerteController::class, 'trashedDeclarations']);
@@ -75,7 +81,7 @@ Route::middleware('auth:api')->group(function () {
     Route::get('new-notifications', [NotificationController::class, 'getNewNotifications']);
     Route::get('restitution-count', [NotificationController::class, 'getRestitutionRequestCount']);
 
-    // Autres routes protégées
+    // Autres routes protégées for admin
     Route::get('all-publications', [DocumentController::class, 'getAllPublications']);
     Route::get('publications-by-type', [DocumentController::class, 'getPublicationsByType']);
     Route::get('restitution-data', [DocumentController::class, 'getRestitutionData']);
