@@ -3,13 +3,14 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Support\Str;
+use App\Notifications\ResetPassword;
 use Spatie\Permission\Contracts\Role;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use App\Notifications\ResetPassword;
 
 class User extends Authenticatable  implements JWTSubject
 {
@@ -70,6 +71,15 @@ class User extends Authenticatable  implements JWTSubject
    public function sendPasswordResetNotification($token)
 {
     $this->notify(new ResetPassword($token));
+}
+
+protected static function boot()
+{
+    parent::boot();
+
+    static::creating(function ($model) {
+        $model->uuid = (string) Str::uuid();
+    });
 }
 
 }

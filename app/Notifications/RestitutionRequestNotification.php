@@ -39,10 +39,10 @@ class RestitutionRequestNotification extends Notification
             ->line('Email : ' . $this->fromUser->email)
             ->line('Téléphone : ' . $this->fromUser->Phone)
             ->line('Pour plus de détails, veuillez cliquer sur le bouton ci-dessous :')
-            ->action('Voir le document', url('https://sendoctrack.netlify.app/document/' . $this->document->id))
+            ->action('Voir le document', url('https://sendoctrack.netlify.app/document/' . $this->document->uuid))
             ->line('Nous vous remercions de votre confiance se manifestant par l\'utilisation de notre plateforme.')
             ->line('Cordialement,')
-            ->line('L’équipe de Sénégal DockTrack');
+            ->line('L’équipe de Sénégal DocTrack');
 
         // Enregistre le log de l'email dans la base de données avec les nouvelles colonnes
         EmailLog::create([
@@ -52,7 +52,7 @@ class RestitutionRequestNotification extends Notification
             'body' => implode("\n", $mailMessage->introLines), // Combine les lignes du message pour le corps
             'publisher_user_id' => $notifiable->id, // Publicateur du document
             'requester_user_id' => $this->fromUser->id, // Demandeur de restitution
-            'document_id' => $this->document->id, // ID du document
+            'document_id' => $this->document->uuid, // ID du document
             'declarant_user_id' => null, // Dans ce cas, il n'y a pas de déclaration de perte
         ]);
 

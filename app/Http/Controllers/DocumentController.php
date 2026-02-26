@@ -6,10 +6,11 @@ use GuzzleHttp\Client;
 use App\Models\Document;
 use App\Models\EmailLog;
 use App\Models\Notification;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Symfony\Component\Clock\now;
 use App\Models\DeclarationDePerte;
-use App\Services\OrangeSMSService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Events\NewNotificationEvent;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cache;
+use Intervention\Image\Facades\Image;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\StoreDocumentRequest;
@@ -28,50 +30,48 @@ use App\Notifications\RestitutionRequestNotification;
 class DocumentController extends Controller
 {
     use SoftDeletes;
-
     /**
-     * Display a listing of the resource.
+     * Afficher tous les documents
      */
-/**
- * Display a listing of the resource.
- */
-public function index()
-{
-    $user = Auth::user(); // Récupérer l'utilisateur authentifié
+    public function index()
+    {
+        $user = Auth::user(); // Récupérer l'utilisateur authentifié
 
-    // Si l'utilisateur est un admin, récupérer tous les documents (y compris ceux supprimés)
-    if ($user && $user->hasRole('Admin')) {
-        $documents = Document::withTrashed()->with(['user', 'documentType'])->get();
-    } else {
-        // Récupère uniquement les documents actifs (non supprimés)
-        $documents = Document::whereNull('deleted_at')->with(['user', 'documentType'])->get();
+        // Si l'utilisateur est un admin, récupérer tous les documents (y compris ceux supprimés)
+        if ($user && $user->hasRole('Admin')) {
+            $documents = Document::withTrashed()->with(['user', 'documentType'])->get();
+        } else {
+            // Récupère uniquement les documents actifs (non supprimés)
+            $documents = Document::whereNull('deleted_at')->with(['user', 'documentType'])->get();
+        }
+
+        // Retourne les documents en JSON, y compris les informations de l'utilisateur et du type de document
+        return response()->json($documents);
     }
 
-    // Retourne les documents en JSON, y compris les informations de l'utilisateur et du type de document
-    return response()->json($documents);
-}
+    // Afficher toutes les publications y compris celles supprimer en soft
+    public function getAllPublications(Request $request)
+    {
+        // Vérifie si l'utilisateur est connecté
+        if (Auth::check()) {
+            // Récupère toutes les publications, y compris les supprimées (soft deleted)
+            $documents = Document::withTrashed()->with(['user', 'documentType'])->get(); // Inclut les soft deletes et les infos de l'utilisateur
 
-public function getAllPublications(Request $request)
-{
-    // Vérifie si l'utilisateur est connecté
-    if (Auth::check()) {
-        // Récupère toutes les publications, y compris les supprimées (soft deleted)
-        $documents = Document::withTrashed()->with(['user', 'documentType'])->get(); // Inclut les soft deletes et les infos de l'utilisateur
-
-        return response()->json($documents); // Retourne le tableau directement
-    } else {
-        // Si l'utilisateur n'est pas connecté, retourne un message d'erreur
-        return response()->json([
-            'success' => false,
-            'message' => 'Utilisateur non authentifié',
-        ], 401); // Code 401 pour l'authentification non autorisée
+            return response()->json($documents); // Retourne le tableau directement
+        } else {
+            // Si l'utilisateur n'est pas connecté, retourne un message d'erreur
+            return response()->json([
+                'success' => false,
+                'message' => 'Utilisateur non authentifié',
+            ], 401); // Code 401 pour l'authentification non autorisée
+        }
     }
-}
 
 
     /**
-     * Store a newly created resource in storage.
+     * Creer une nouvelle publication
      */
+
     public function store(StoreDocumentRequest $request)
     {
         // Valider la demande et récupérer le fichier image
@@ -86,47 +86,69 @@ public function getAllPublications(Request $request)
             'user_id' => Auth::id(),
         ]);
 
-        // Vérifie si un fichier image a été téléversé et est valide
         if ($request->hasFile('image') && $request->file('image')->isValid()) {
-            // Enregistre l'image dans le dossier 'documents' du système de fichiers public
-            $path = $request->file('image')->store('documents', 'public');
-            // Génère l'URL accessible publiquement pour l'image
-            $document->image = Storage::url($path);
+            $originalFile = $request->file('image');
+            $fileName = time() . '_' . $originalFile->getClientOriginalName(); // Nom unique, par exemple "1741101253_2.png"
+            $path = 'documents/' . $fileName; // Par exemple "documents/1741101253_2.png"
+
+            try {
+                Log::info('Tentative de conversion de l’image en WebP');
+                // Convertir l'image en WebP avec le facade
+                $image = Image::make($originalFile);
+                $image->encode('webp', 90); // Qualité 90% (ajustable)
+
+                // Sauvegarder en WebP dans le stockage public avec l'extension .webp
+                $webpPath = $path . '.webp'; // Par exemple "documents/1741101253_2.png.webp"
+                Storage::disk('public')->put($webpPath, $image->stream());
+
+                // Stocker l'URL publique de l'image WebP
+                $document->image = Storage::url($webpPath);
+                Log::info('Image convertie et sauvegardée avec succès : ' . $document->image);
+            } catch (\Exception $e) {
+                Log::error('Erreur lors de la conversion de l’image en WebP : ' . $e->getMessage());
+                return response()->json(['error' => 'Erreur lors du traitement de l’image'], 500);
+            }
         } else {
             return response()->json(['error' => 'Aucun fichier image valide fourni'], 400);
         }
 
-        // Enregistre le document dans la base de données
+
         $document->save();
 
-        // Notifier l'admin d'un nouveau document publié
-        Notification::create([
-            'message' => 'Un nouveau document a été publié : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
-            'is_read' => false,
-        ]);
+        // Notifier l'admin
+        // Notification::create([
+        //     'message' => 'Un nouveau document a été publié : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
+        //     'is_read' => false,
+        // ]);
 
-        // Recherche des déclarations de perte correspondantes (insensible à la casse)
+        // Recherche des déclarations correspondantes
         $declarations = DeclarationDePerte::whereRaw('LOWER(FirstNameInDoc) = ?', [strtolower($document->OwnerFirstName)])
             ->whereRaw('LOWER(LastNameInDoc) = ?', [strtolower($document->OwnerLastName)])
             ->get();
 
         foreach ($declarations as $declaration) {
-            $user = $declaration->user; // Récupérer l'utilisateur qui a fait la déclaration
-            $phone = $user->Phone; // Assurez-vous que le champ `phone` est correct et existe
-            $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id; // URL pour afficher le document
+            $user = $declaration->user;
+            $phone = $user->Phone;
+            // $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id;
+            $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->uuid;
+
 
             try {
                 // Envoi de l'email
                 Mail::to($user->email)->send(new DocumentPublishedNotification($document, $phone, $documentUrl));
+                // Mail::to($user->email)->send(new DocumentPublishedNotification($document, $phone, $documentUrl, $user));
 
-                        // Envoi du SMS
-                        $phoneNumber = $user->Phone; // Numéro de téléphone de l'utilisateur déclarant
-                        $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->id;
-                        $message = 'Un document correspondant à votre déclaration de perte a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
+                // Envoi du SMS
+                $phoneNumber = $user->Phone; // Numéro de téléphone de l'utilisateur déclarant
+                $message = 'Un document correspondant à votre déclaration de perte a été trouvé : ' .
+                           $document->OwnerFirstName . ' ' . $document->OwnerLastName .
+                           '. Consultez-le ici : ' . $documentUrl;
+                 // Appel à la méthode pour l'envoi de SMS
+                  $this->sendSMS($phoneNumber, $message);
 
-                        $this->sendSMS($phoneNumber, $message); // Appel à la méthode pour l'envoi de SMS
+
                 // Log de l'email
-                \App\Models\EmailLog::create([
+                EmailLog::create([
                     'from' => config('mail.from.address'),
                     'to' => $user->email,
                     'subject' => 'Correspondance à votre déclaration de perte',
@@ -135,7 +157,7 @@ public function getAllPublications(Request $request)
                               ' avec le numéro du publicateur : ' . $phone,
                     'publisher_user_id' => $document->user->id,
                     'requester_user_id' => $user->id,
-                    'document_id' => $document->id,
+                    'document_id' => $document->uuid,
                     'declarant_user_id' => $user->id,
                 ]);
 
@@ -145,14 +167,15 @@ public function getAllPublications(Request $request)
                 Log::error('Erreur lors de l\'envoi de la notification : ' . $e->getMessage(), [
                     'publisher_user_id' => $document->user->id,
                     'requester_user_id' => $user->id,
-                    'document_id' => $document->id,
+                    'document_id' => $document->uuid,
                     'declarant_user_id' => $user->id,
                 ]);
             }
 
-            // Enregistrer une notification pour l'utilisateur
+            // Notification pour l'utilisateur
             Notification::create([
-                'message' => 'Un document correspondant à une déclaration a été trouvé : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
+                'message' => 'Un document correspondant à une déclaration a été trouvé : ' .
+                             $document->OwnerFirstName . ' ' . $document->OwnerLastName,
                 'is_read' => false,
             ]);
         }
@@ -304,13 +327,13 @@ public function getAllPublications(Request $request)
         throw new \Exception('Impossible d\'obtenir le jeton d\'accès');
     }
 
-        /**
+    /**
      * Gérer la demande de restitution.
      */
-    public function requestRestitution($documentId)
+    public function requestRestitution($uuid)
     {
-        // Récupérer le document concerné
-        $document = Document::findOrFail($documentId);
+         // Récupérer le document concerné par son uuid
+         $document = Document::where('uuid', $uuid)->firstOrFail();
 
         // L'utilisateur connecté qui clique sur "Restituer"
         $fromUser = Auth::user();
@@ -325,7 +348,8 @@ public function getAllPublications(Request $request)
 
         // Vérifier si une demande de restitution pour ce document a déjà été faite par cet utilisateur
         $existingEmailLog = EmailLog::where('requester_user_id', $fromUser->id)
-            ->where('document_id', $documentId)
+            // ->where('document_id', $documentId)
+            ->where('document_id', $document->uuid) // Utilisation de uuid
             ->whereNotNull('publisher_user_id') // S'assurer qu'il s'agit bien d'une demande de restitution
             ->first();
 
@@ -344,56 +368,58 @@ public function getAllPublications(Request $request)
 
         // Envoyer la notification par SMS
         $phoneNumber = $toUser->Phone; // Assure-toi que le champ du numéro de téléphone est correct
-        $documentUrl = 'https://sendoctrack.netlify.app/document/' . $documentId; // URL pour afficher le document
-        $smsMessage = 'Bonjour, vous avez une demande de restitution pour le document : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
+        // $documentUrl = 'https://sendoctrack.netlify.app/document/' . $documentId; // URL pour afficher le document
+        $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->uuid; // Utilisation de uuid
+        $message = 'Bonjour, vous avez une demande de restitution pour le document : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
 
-        // Appeler la méthode sendSMS
-        $this->sendSMS($phoneNumber, $smsMessage);
+         // Appel à la méthode pour l'envoi de SMS
+        $this->sendSMS($phoneNumber, $message);
 
         // Retourner une réponse JSON
         return response()->json(['message' => 'Demande de restitution envoyée avec succès.']);
     }
 
-            /**
-     * Display the specified resource.
+     /**
+     * Afficher le document specifique.
      */
-    public function show($id) {
-        $document = Document::with(['user', 'documentType'])->find($id); // Charge les détails de l'utilisateur associé
-        if (!$document) {
+    public function show($uuid) // Changé de $id à $uuid
+    {
+        $document = Document::with(['user', 'documentType'])->where('uuid', $uuid)->firstOrFail();
+                if (!$document) {
             return response()->json(['message' => 'Document not found'], 404);
         }
         return response()->json($document);
     }
 
-
     /**
-     * Update the specified resource in storage.
+     * Mise à jour de document
      */
-    public function update(UpdateDocumentRequest $request, Document $document)
+    public function update(UpdateDocumentRequest $request, $uuid) // Changé de Document $document à $uuid
     {
-        // Vérifiez si l'utilisateur authentifié est le propriétaire du document
+        $document = Document::where('uuid', $uuid)->firstOrFail();
+
         if (Auth::id() !== $document->user_id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Vous n\'êtes pas autorisé à mettre à jour ce document.'
-            ], 403); // Code 403 Forbidden
+            ], 403);
         }
 
-        // Met à jour le document avec les données validées
-        $validatedData = $request->validated(); // Valider la requête
-
-        // Mise à jour uniquement des champs présents dans la requête
+        $validatedData = $request->validated();
         $document->update($validatedData);
 
         return response()->json([
             'success' => true,
             'message' => 'Document mis à jour avec succès.',
-            'document' => $document // Retourner le document mis à jour
+            'document' => $document
         ]);
     }
 
 
-    public function destroy($id)
+    /**
+     * Suppression de suppression de document
+     */
+    public function destroy($uuid) // Changé de $id à $uuid
     {
         $user = Auth::user();
 
@@ -401,14 +427,13 @@ public function getAllPublications(Request $request)
             return response()->json([
                 'success' => false,
                 'message' => 'Vous devez être authentifié pour effectuer cette action.'
-            ], 401); // Code 401 Unauthorized
+            ], 401);
         }
 
-        $document = Document::findOrFail($id);
+        $document = Document::findOrFail($uuid); // À ajuster pour utiliser where('uuid', $uuid)
 
-        // Si l'utilisateur est un simple utilisateur, vérifier qu'il est propriétaire de la publication
         if ($user->hasRole('Admin') || $document->user_id === $user->id) {
-            $document->delete(); // Ceci marque le document comme supprimé (soft delete)
+            $document->delete();
             return response()->json([
                 'success' => true,
                 'message' => 'Publication supprimée avec succès.'
@@ -421,23 +446,23 @@ public function getAllPublications(Request $request)
         ], 403);
     }
 
-    public function restoreTrashedDocument($id)
+
+    // Fonction de la restauration d'un document supprimé
+    public function restoreTrashedDocument($uuid) // Changé de $id à $uuid
     {
-        $user = Auth::user(); // Récupérer l'utilisateur authentifié
+        $user = Auth::user();
 
         if (!$user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Vous devez être authentifié pour effectuer cette action.'
-            ], 401); // Code 401 Unauthorized
+            ], 401);
         }
 
-        // Trouver le document même s'il est soft deleted
-        $document = Document::onlyTrashed()->findOrFail($id);
+        $document = Document::onlyTrashed()->where('uuid', $uuid)->firstOrFail();
 
-        // Vérifier si l'utilisateur est le propriétaire du document
         if ($document->user_id === $user->id) {
-            $document->restore(); // Restaurer le document soft deleted
+            $document->restore();
             return response()->json([
                 'success' => true,
                 'message' => 'Document restauré avec succès.'
@@ -451,7 +476,7 @@ public function getAllPublications(Request $request)
     }
 
 
-
+    // Fonction pour obtenir la liste des documents supprimés
     public function trashedDocuments()
     {
         $user = Auth::user(); // Récupérer l'utilisateur authentifié
@@ -475,6 +500,7 @@ public function getAllPublications(Request $request)
         ]);
     }
 
+    // Fonction pour obtenir uniquement les documents de l'utilisateur connecté
     public function OwnPub()
     {
         // Récupère uniquement les documents de l'utilisateur connecté
@@ -483,6 +509,7 @@ public function getAllPublications(Request $request)
         // Retourne les documents en JSON, y compris les informations de l'utilisateur
         return response()->json($documents);
     }
+
 
     // Fonction pour obtenir uniquement les documents supprimés
     public function getDeletedDocuments()
@@ -502,6 +529,7 @@ public function getAllPublications(Request $request)
 
         return response()->json($documents);
     }
+
 
     // Fonction pour obtenir les documents dont le statut est "récupéré"
     public function getRecoveredDocuments()
@@ -549,7 +577,7 @@ public function getAllPublications(Request $request)
     }
 
 
-
+    // Fonction pour obtenir les publications par type
     public function getPublicationsByType()
     {
         $publications = Document::select('document_type_id', DB::raw('count(*) as count'))
@@ -567,6 +595,7 @@ public function getAllPublications(Request $request)
         ]);
     }
 
+    // Fonction pour obtenir les données de restitution
     public function getRestitutionData()
     {
         $restitutionCount = EmailLog::where('subject', 'LIKE', '%Demande de restitution%')->count();
@@ -578,6 +607,7 @@ public function getAllPublications(Request $request)
         ]);
     }
 
+    // Fonction pour obtenir les données d'activité des emails
     public function getEmailActivity()
     {
         // Compte le nombre d'emails envoyés par sujet
@@ -590,7 +620,7 @@ public function getAllPublications(Request $request)
 
 
     /**
-     * Get statistics of declarations and publications by date.
+     * Fonction pour obtenir les statistiques de publications et déclarations de perte par mois
      */
     public function getStatistics()
     {
@@ -621,6 +651,7 @@ public function getAllPublications(Request $request)
         return response()->json(['data' => $data]);
     }
 
+    // Fonction pour obtenir les statistiques de publications et déclarations de perte par type de document
     public function getDocumentStatusCountWithTrashed(Request $request)
     {
         // Vérifie si l'utilisateur est connecté
@@ -645,46 +676,104 @@ public function getAllPublications(Request $request)
         }
     }
 
-    public function getCoordinates($location)
+
+     /**
+     * Fonction pour obtenir les coordonnées d'une ville
+     */
+    private const CACHE_TTL_SECONDS = 172800; //Durée de mise en cache des coordonnées (48 heures en secondes)
+    private const OPENCAGE_API_URL = 'https://api.opencagedata.com/geocode/v1/json'; // URL de l'API OpenCage Geocoding.
+
+    /**
+     * Récupère les coordonnées géographiques (latitude, longitude) d'une localité.
+     *
+     * @param string $location Nom de la localité (ex. "Dakar")
+     * @return array Tableau contenant latitude, longitude et un message d'erreur éventuel
+     */
+    public function getCoordinates(string $location): array
     {
-        // Vérifie si les coordonnées sont déjà dans le cache
-        $cacheKey = 'coordinates_' . $location;
+        $cacheKey = "coordinates_{$location}";
+
+        // Vérifier le cache
         if (Cache::has($cacheKey)) {
-            return Cache::get($cacheKey);
+            $coordinates = Cache::get($cacheKey);
+            // Log::info("Coordinates retrieved from cache for {$location}", $coordinates);
+            return $coordinates;
         }
 
-        $client = new Client();
-        $url = 'https://api.opencagedata.com/geocode/v1/json'; // Limites gratuites : Jusqu'à 2 500 requêtes par jour.
+        // Ajouter le contexte géographique (Sénégal)
+        $queryLocation = "{$location}, Senegal";
 
         try {
-            $response = $client->get($url, [
+            $client = new Client();
+            $response = $client->get(self::OPENCAGE_API_URL, [
                 'query' => [
-                    'q' => $location,
-                    'key' => '39195082031d4014b230dcb3433133b3', //  clé API OpenCage
-                    'countrycode' => 'SN', // Code pays pour restreindre la recherche au Sénégal
-                    'limit' => 1 // Limite le nombre de résultats
-                ]
+                    'q' => $queryLocation,
+                    'key' => config('services.opencage.api_key'),
+                    'countrycode' => 'SN',
+                    'limit' => 1,
+                ],
             ]);
 
             $data = json_decode($response->getBody(), true);
+            // Log::info("OpenCage API response for {$queryLocation}", $data);
 
-            $coordinates = [
-                'latitude' => $data['results'][0]['geometry']['lat'] ?? null,
-                'longitude' => $data['results'][0]['geometry']['lng'] ?? null
-            ];
+            if (!empty($data['results'])) {
+                $coordinates = [
+                    'latitude' => $data['results'][0]['geometry']['lat'] ?? null,
+                    'longitude' => $data['results'][0]['geometry']['lng'] ?? null,
+                ];
 
-            // Mettre les coordonnées dans le cache pour une durée de 48 heures
-            Cache::put($cacheKey, $coordinates, 172800);
+                // Mettre en cache les coordonnées
+                Cache::put($cacheKey, $coordinates, self::CACHE_TTL_SECONDS);
+                // Log::info("Coordinates cached for {$queryLocation}", $coordinates);
 
-            return $coordinates;
-        } catch (\Exception $e) {
+                return $coordinates;
+            }
+
+            // Log::warning("No geocoding results found for {$queryLocation}");
             return [
                 'latitude' => null,
                 'longitude' => null,
-                'error' => 'Erreur lors de la récupération des coordonnées.'
+                'error' => 'No results found for the location.',
+            ];
+        } catch (\Exception $e) {
+            // Log::error("Error fetching coordinates for {$queryLocation}: {$e->getMessage()}");
+            return [
+                'latitude' => null,
+                'longitude' => null,
+                'error' => "Failed to fetch coordinates: {$e->getMessage()}",
             ];
         }
     }
+
+     // Méthode pour récupérer les publications et leurs coordonnées
+     public function getPublicationsByLocation()
+        {
+            $localities = Document::distinct()->pluck('Location');
+
+            $regions = $localities->map(function($location) {
+                // Vérifie ou génère les coordonnées
+                $coords = $this->getCoordinates($location);
+
+                return [
+                    'name' => $location,
+                    'latitude' => $coords['latitude'],
+                    'longitude' => $coords['longitude'],
+                ];
+            });
+
+            $publications = Document::select('Location', DB::raw('COUNT(*) as publications'))
+                            ->groupBy('Location')
+                            ->get()
+                            ->keyBy('Location');
+
+            $regions = $regions->map(function($region) use ($publications) {
+                $region['publications'] = $publications[$region['name']]->publications ?? 0;
+                return $region;
+            });
+
+            return response()->json($regions);
+     }
 
 //     public function getCoordinates($location)
 // {
@@ -762,36 +851,6 @@ public function getAllPublications(Request $request)
 //         ];
 //     }
 // }
-
-
-    // Méthode pour récupérer les publications et leurs coordonnées
-    public function getPublicationsByLocation()
-    {
-        $localities = Document::distinct()->pluck('Location');
-
-        $regions = $localities->map(function($location) {
-            // Vérifie ou génère les coordonnées
-            $coords = $this->getCoordinates($location);
-
-            return [
-                'name' => $location,
-                'latitude' => $coords['latitude'],
-                'longitude' => $coords['longitude'],
-            ];
-        });
-
-        $publications = Document::select('Location', DB::raw('COUNT(*) as publications'))
-                        ->groupBy('Location')
-                        ->get()
-                        ->keyBy('Location');
-
-        $regions = $regions->map(function($region) use ($publications) {
-            $region['publications'] = $publications[$region['name']]->publications ?? 0;
-            return $region;
-        });
-
-        return response()->json($regions);
-    }
 
 
 

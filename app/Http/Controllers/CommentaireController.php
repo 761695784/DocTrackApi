@@ -17,7 +17,7 @@ class CommentaireController extends Controller
     public function index()
     {
         // Récupérer et retourner tous les commentaires avec leurs utilisateurs et documents associés
-        $commentaires = Commentaire::with(['user', 'document'])->get(); // Cela devrait fonctionner maintenant
+        $commentaires = Commentaire::with(['user', 'document'])->get(); 
         return response()->json($commentaires);
     }
 
@@ -94,14 +94,15 @@ class CommentaireController extends Controller
         ]);
     }
 
-    public function getCommentairesByDocument($document_id)
+public function getCommentairesByDocument($uuid)
 {
-    // Récupérer les commentaires pour un document spécifique avec les informations sur l'utilisateur
-    $commentaires = Commentaire::with('user')
-        ->where('document_id', $document_id)
-        ->get();
+    // Trouver le document par son UUID
+    $document = Document::where('uuid', $uuid)->firstOrFail();
 
-    // Retourner les commentaires en JSON
+    // Récupérer les commentaires via la relation
+    $commentaires = $document->comments()->with('user')->get();
+
+    // Retourner les commentaires au format JSON
     return response()->json($commentaires);
 }
 

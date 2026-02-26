@@ -1,7 +1,7 @@
 @component('mail::message')
 # Notification de Publication d'un Document
 
-Bonjour,
+Bonjour {{ $document->FirstName }} ,
 
 Suite à votre déclaration de perte, nous avons le plaisir de vous informer que le document portant le prénom **{{ $document->OwnerFirstName }}** et le nom **{{ $document->OwnerLastName }}** a été récemment publié. Il pourrait correspondre à votre déclaration de perte.
 

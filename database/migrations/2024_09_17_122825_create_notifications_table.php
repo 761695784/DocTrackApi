@@ -14,7 +14,9 @@ return new class extends Migration
     {
         Schema::create('notifications', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();; // Colonne UUID avec contrainte d'unicité
             $table->text('message');
+            $table->boolean('is_read')->default(false); // Colonne is_read avec valeur par défaut false
             $table->foreignIdFor(DeclarationDePerte::class)->constrained()->onDelete('cascade');
             $table->timestamps();
         });
