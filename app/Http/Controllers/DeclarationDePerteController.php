@@ -47,6 +47,7 @@ class DeclarationDePerteController extends Controller
         // Générer automatiquement le certificat
         $certificat = $certificatService->genererCertificat($declaration);
 
+
         // Création d'une notification
         // Notification::create([
         //     'message' => 'Nouvelle déclaration de perte créée : ' . $declaration->Title . ' ' . $declaration->FirstNameInDoc . ' ' . $declaration->LastNameInDoc,
@@ -82,7 +83,8 @@ class DeclarationDePerteController extends Controller
             'data' => [
                     'declaration' => $declaration,
                     'certificat' => $certificat,
-                    'pdf_url' => asset('storage/' . $certificat->pdf_path)
+                    // 'pdf_url' => asset('storage/' . $certificat->pdf_path)
+                    'pdf_url' => url('/api/certificats/'.$certificat->id.'/voir') // Lien pour voir le PDF via l'API
         ]
         ], 201);
     }
@@ -372,8 +374,9 @@ class DeclarationDePerteController extends Controller
 
         // Récupérer les déclarations faites par l'utilisateur connecté avec les informations de l'utilisateur et du type de document
         $declarations = DeclarationDePerte::where('user_id', $user->id)
-            ->with(['user', 'documentType']) // Charger les relations user et documentType
+            ->with(['user', 'documentType','certificat' ]) // Charger les relations user et documentType
             ->get();
+            // dd($declarations->first()->certificat);
 
         return response()->json([
             'success' => true,

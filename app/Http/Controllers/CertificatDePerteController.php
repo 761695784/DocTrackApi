@@ -112,4 +112,47 @@ class CertificatDePerteController extends Controller
 
         return response()->download($pdfPath, "certificat-perte-{$certificat->id}.pdf");
     }
+
+    // public function voir($slug)
+    // {
+    //     $certificat = CertificatDePerte::where('id', $slug)->first();
+
+    //     if (!$certificat) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Certificat non trouvé.'
+    //         ], 404);
+    //     }
+
+    //     $pdfUrl = asset('storage/' . $certificat->pdf_path);
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'pdf_url' => $pdfUrl
+    //     ]);
+    // }
+
+    public function voir($id)
+{
+    $user = Auth::user();
+
+    if (!$user) {
+        return response()->json(['message' => 'Non authentifié'], 401);
+    }
+
+    $certificat = CertificatDePerte::with('declarationDePerte')
+        ->findOrFail($id);
+
+    if ($certificat->declarationDePerte->user_id !== $user->id) {
+        return response()->json(['message' => 'Accès refusé'], 403);
+    }
+
+    $path = storage_path('app/public/' . $certificat->pdf_path);
+
+    if (!file_exists($path)) {
+        return response()->json(['message' => 'Fichier introuvable'], 404);
+    }
+
+    return response()->file($path);
+}
 }

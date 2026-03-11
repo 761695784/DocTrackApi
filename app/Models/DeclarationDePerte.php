@@ -43,8 +43,7 @@ class DeclarationDePerte extends Model
     }
 
     public function certificat()
-{
-    return $this->hasOne(CertificatDePerte::class);
-}
-
+    {
+        return $this->hasOne(CertificatDePerte::class, 'declaration_de_perte_id');
+    }
 }

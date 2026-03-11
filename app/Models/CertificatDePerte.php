@@ -8,8 +8,9 @@ class CertificatDePerte extends Model
 {
    protected $guarded = [];
 
-       public function declarationdeperte() {
-        return $this->belongsTo(DeclarationDePerte::class, 'declaration_de_perte_id');
+        public function declarationDePerte() // ← camelCase cohérent
+        {
+            return $this->belongsTo(DeclarationDePerte::class, 'declaration_de_perte_id');
         }
         
         public function documentType()
