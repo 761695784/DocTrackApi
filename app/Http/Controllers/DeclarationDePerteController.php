@@ -84,7 +84,7 @@ class DeclarationDePerteController extends Controller
                     'declaration' => $declaration,
                     'certificat' => $certificat,
                     // 'pdf_url' => asset('storage/' . $certificat->pdf_path)
-                    'pdf_url' => url('/api/certificats/'.$certificat->id.'/voir') // Lien pour voir le PDF via l'API
+                    'pdf_url' => url('/api/certificats/'.$certificat->uuid.'/voir') // Lien pour voir le PDF via l'API
         ]
         ], 201);
     }

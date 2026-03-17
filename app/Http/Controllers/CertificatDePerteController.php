@@ -113,26 +113,8 @@ class CertificatDePerteController extends Controller
         return response()->download($pdfPath, "certificat-perte-{$certificat->id}.pdf");
     }
 
-    // public function voir($slug)
-    // {
-    //     $certificat = CertificatDePerte::where('id', $slug)->first();
 
-    //     if (!$certificat) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Certificat non trouvé.'
-    //         ], 404);
-    //     }
-
-    //     $pdfUrl = asset('storage/' . $certificat->pdf_path);
-
-    //     return response()->json([
-    //         'success' => true,
-    //         'pdf_url' => $pdfUrl
-    //     ]);
-    // }
-
-    public function voir($id)
+    public function voir($uuid)
 {
     $user = Auth::user();
 
@@ -141,7 +123,8 @@ class CertificatDePerteController extends Controller
     }
 
     $certificat = CertificatDePerte::with('declarationDePerte')
-        ->findOrFail($id);
+         ->where('uuid', $uuid)  // ← where uuid au lieu de findOrFail(id)
+        ->firstOrFail();
 
     if ($certificat->declarationDePerte->user_id !== $user->id) {
         return response()->json(['message' => 'Accès refusé'], 403);

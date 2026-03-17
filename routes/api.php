@@ -67,7 +67,7 @@ Route::middleware('auth:api')->group(function () {
     Route::get('trashed-declarations', [DeclarationDePerteController::class, 'trashedDeclarations']);
     Route::post('declarations/restore/{slug}', [DeclarationDePerteController::class, 'restoreTrashedDeclaration']);
     Route::get('my-declarations', [DeclarationDePerteController::class, 'getUserDeclarations']);
-    Route::get('/certificats/{id}/voir', [CertificatDePerteController::class, 'voir']);
+    Route::get('/certificats/{slug}/voir', [CertificatDePerteController::class, 'voir']);
 
     // Routes pour les commentaires
     Route::apiResource('comments', CommentaireController::class);

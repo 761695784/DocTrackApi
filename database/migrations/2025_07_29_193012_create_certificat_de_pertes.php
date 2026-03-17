@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('certificat_de_pertes', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
             $table->foreignId('declaration_de_perte_id')->constrained()->onDelete('cascade');
             $table->string('certificat_number')->unique();
             $table->foreignId('document_type_id')->constrained('document_types')->onDelete('cascade');
