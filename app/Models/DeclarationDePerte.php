@@ -8,13 +8,24 @@ use Illuminate\Database\Eloquent\Model;
 use App\Mail\DocumentPublishedNotification;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class DeclarationDePerte extends Model
 {
-    use HasFactory;    use SoftDeletes;
+    use HasFactory;    use SoftDeletes; use LogsActivity;
 
     protected $guarded = [];
 
+        
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['uuid', 'Title', 'FirstNameInDoc', 'LastNameInDoc'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
     public function documentType() {
         return $this->belongsTo(DocumentType::class, 'document_type_id'); // Assurez-vous que 'document_type_id' est la bonne clé étrangère
     }

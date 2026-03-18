@@ -20,9 +20,6 @@ Route::post('/auth/google/callback', [AuthController::class, 'handleGoogleLogin'
 Route::post('/auth/google/finalize-account-creation', [AuthController::class, 'finalizeAccountCreation']);
 Route::post('/found-qr', [QrCodeController::class, 'handleFoundQr']);
 
-Route::post('/certificats/{id}/telecharger', [CertificatDePerteController::class, 'telecharger']);
-Route::get('/admin/certificats', [CertificatDePerteController::class, 'index']);
-Route::get('/my-certificats', [CertificatDePerteController::class ,'mesCertificats']);
 Route::post('/verify-email', [EmailVerificationController::class, 'verify']);
 
 
@@ -42,12 +39,19 @@ Route::middleware('auth:api')->group(function () {
     Route::put('change-password', [AuthController::class, 'changePassword']);
     Route::put('profil', [AuthController::class, 'updateProfile']);
     Route::post('/renew-qr-code', [AuthController::class, 'renewQrCode']);
+    Route::get('/my-certificats', [CertificatDePerteController::class, 'mesCertificats']);
 
 
     // Routes admin
     Route::get('/users', [AuthController::class, 'getAllUsersWithRoles']);
     Route::delete('users/{slug}', [AuthController::class, 'deleteUser']);
     Route::post('create-admin', [AuthController::class, 'createAdmin']);
+    Route::get('/activity-logs', [AuthController::class, 'getActivityLogs']);
+    Route::get('/activity-logs/{subject_type}', [AuthController::class, 'getLogsByType']);
+    Route::get('/admin/certificats', [CertificatDePerteController::class, 'index']);
+    Route::get('/certificats/{slug}/telecharger', [CertificatDePerteController::class, 'telecharger']);
+    Route::get('/certificats/{slug}/voir', [CertificatDePerteController::class, 'voir']);
+
 
     // Routes pour les documents
     Route::post('documents', [DocumentController::class, 'store']);

@@ -1,19 +1,19 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreDeclarationDePerteRequest;
+use App\Mail\DocumentPublishedNotification;
+use App\Models\DeclarationDePerte;
 use App\Models\Document;
 use App\Models\Notification;
-use Illuminate\Http\Request;
-use App\Models\DeclarationDePerte;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Mail;
-use Spatie\Permission\Traits\HasRoles;
-use App\Mail\DocumentPublishedNotification;
-use App\Http\Requests\StoreDeclarationDePerteRequest;
 use App\Services\CertificatDePerteService;
 use App\Services\SmsService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Spatie\Permission\Traits\HasRoles;
 
 
 class DeclarationDePerteController extends Controller
@@ -43,6 +43,20 @@ class DeclarationDePerteController extends Controller
             'document_type_id' => $validatedData['document_type_id'],
             'user_id' => $user->id,
         ]);
+
+        // ── Log d'activité ──
+         /** @var \App\Models\User $user */
+        $user = Auth::user();
+        activity()
+            ->causedBy($user)
+            ->performedOn($declaration)
+            ->withProperties([
+                'Title'            => $declaration->Title,
+                'FirstNameInDoc'   => $declaration->FirstNameInDoc,
+                'LastNameInDoc'    => $declaration->LastNameInDoc,
+                'document_type_id' => $declaration->document_type_id,
+            ])
+            ->log('Déclaration de perte créée');
 
         // Générer automatiquement le certificat
         $certificat = $certificatService->genererCertificat($declaration);
@@ -353,6 +367,15 @@ class DeclarationDePerteController extends Controller
             ]);
         }
 
+        // ── Log d'activité ──
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        activity()
+            ->causedBy($user)
+            ->performedOn($declaration)
+            ->withProperties(['uuid' => $declaration->uuid])
+            ->log('Déclaration restaurée');
+
         return response()->json([
             'success' => false,
             'message' => 'Accès refusé. Vous ne pouvez restaurer que vos propres déclarations.'
@@ -436,6 +459,18 @@ class DeclarationDePerteController extends Controller
                 'message' => 'Déclaration de perte supprimée avec succès.'
             ]);
         }
+
+        // ── Log d'activité ──
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        activity()
+            ->causedBy($user)
+            ->performedOn($declaration)
+            ->withProperties([
+                'uuid'        => $declaration->uuid,
+                'deleted_by'  => $user->id,
+            ])
+            ->log('Déclaration supprimée');
         // retourner la reponse  de l'api
         return response()->json([
             'success' => false,

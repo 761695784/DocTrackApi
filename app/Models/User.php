@@ -11,10 +11,12 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class User extends Authenticatable  implements JWTSubject
 {
-    use HasFactory, HasRoles,Notifiable;
+    use HasFactory, HasRoles,Notifiable; use LogsActivity;
 
     /**
      * The attributes that are mass assignable.
@@ -45,6 +47,15 @@ class User extends Authenticatable  implements JWTSubject
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['FirstName', 'LastName', 'email', 'Phone', 'Adress'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     public function getJWTIdentifier()

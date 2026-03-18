@@ -2,24 +2,75 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DeclarationDePerte;
+use App\Models\Document;
 use App\Models\User;
-use Ramsey\Uuid\Uuid;
-use Illuminate\Support\Str;
 use Illuminate\Http\Request;
-use Tymon\JWTAuth\Facades\JWTAuth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
-use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Laravel\Socialite\Facades\Socialite;
+use Ramsey\Uuid\Uuid;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Spatie\Activitylog\Models\Activity;
+use Tymon\JWTAuth\Facades\JWTAuth;
+
 
 class AuthController extends Controller
 {
+
+        /**
+     * Consulter tous les logs d'activité — admin uniquement
+     */
+    public function getActivityLogs()
+    {
+        if (!Auth::user()?->hasRole('Admin')) {
+            return response()->json(['success' => false, 'message' => 'Accès refusé.'], 403);
+        }
+
+        $logs = Activity::with('causer', 'subject')
+            ->latest()
+            ->paginate(50);
+
+        return response()->json($logs);
+    }
+
+    /**
+     * Logs filtrés par type de sujet
+     */
+    public function getLogsByType(string $subjectType)
+    {
+        if (!Auth::user()?->hasRole('Admin')) {
+            return response()->json(['success' => false, 'message' => 'Accès refusé.'], 403);
+        }
+
+        $map = [
+            'documents'    => Document::class,
+            'declarations' => DeclarationDePerte::class,
+            'users'        => User::class,
+        ];
+
+        if (!isset($map[$subjectType])) {
+        return response()->json([
+            'error'    => 'Type invalide.',
+            'reçu'     => $subjectType,          // ← pour voir ce qui arrive vraiment
+            'valides'  => array_keys($map),
+        ], 422);        }
+        // Récupérer les logs filtrés par type de sujet
+        $logs = Activity::with('causer', 'subject')
+            ->where('subject_type', $map[$subjectType])
+            ->latest()
+            ->paginate(50);
+
+        return response()->json($logs);
+    }
+
     /**
      * Inscription d'un utilisateur
      */
@@ -82,6 +133,17 @@ class AuthController extends Controller
         $fileName = 'qr_codes/' . $user->id . '_qr.png';
         Storage::disk('public')->put($fileName, $qrCodeImage);
 
+        // ── Log d'activité ──
+            activity()
+            ->causedBy($user)
+            ->performedOn($user)
+            ->withProperties([
+                'email'     => $user->email,
+                'FirstName' => $user->FirstName,
+                'LastName'  => $user->LastName,
+            ])
+            ->log('Nouvel utilisateur inscrit');
+
         // Génération du token JWT
         $token = JWTAuth::fromUser($user);
 
@@ -98,7 +160,7 @@ class AuthController extends Controller
     /**
      * Connexion d'un utilisateur
      */
-      public function login(Request $request)
+    public function login(Request $request)
     {
         // Identifier unique pour suivre les tentatives (par email ou IP)
         $identifier = $request->input('email') ?? $request->ip();
@@ -150,10 +212,19 @@ class AuthController extends Controller
             Cache::put($cacheKey, $attempts + 1, 1440); // Stocke pendant 24h (1440 minutes)
             Cache::put("last_attempt_{$identifier}", now(), 1440); // Stocke l'heure de la dernière tentative
 
+            // ── Log tentative échouée ──
+            activity()
+                ->withProperties([
+                    'ip'    => $request->ip(),
+                    'email' => $request->email,
+                ])
+                ->log('Tentative de connexion échouée');
+
             return response()->json([
                 'success' => false,
                 'message' => 'Vos identifiants sont invalides. Veuillez réessayer. Tentatives restantes : ' . (5 - ($attempts + 1))
             ], 401);
+
         }
 
         // Connexion réussie : réinitialiser les tentatives
@@ -162,6 +233,15 @@ class AuthController extends Controller
 
         $user = Auth::user();
         $roles = $user->getRoleNames(); // Récupérer le rôle
+
+        // ── Log connexion réussie (AVANT le return) ──
+        activity()
+            ->causedBy($user)
+            ->withProperties([
+                'ip'         => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ])
+            ->log('Connexion réussie');
 
         // Connexion réussie
         return response()->json([
@@ -177,6 +257,11 @@ class AuthController extends Controller
      */
     public function logout()
     {
+        // ── Log déconnexion ──
+        activity()
+            ->causedBy(Auth::user())
+            ->log('Déconnexion');
+
         Auth::logout();
 
         return response()->json([
@@ -248,6 +333,14 @@ class AuthController extends Controller
         // Mettre à jour le mot de passe de l'utilisateur
         $user->password = Hash::make($request->new_password);
         $user->save();
+
+        // ── Log ──
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        activity()
+            ->causedBy($user)
+            ->performedOn($user)
+            ->log('Mot de passe modifié');
 
         // Retourner un message de succès
         return response()->json([
@@ -330,6 +423,13 @@ class AuthController extends Controller
             ], 403);
         }
 
+        // ── Log ──
+        activity()
+            ->causedBy(Auth::user())
+            ->performedOn($user)
+            ->withProperties(['deleted_uuid' => $user->uuid, 'email' => $user->email])
+            ->log('Utilisateur supprimé par un administrateur');
+
         // Supprimer l'utilisateur s'il a le rôle 'SimpleUser'
         $user->delete();
 
@@ -389,6 +489,13 @@ class AuthController extends Controller
         // Génération du token JWT
         $token = JWTAuth::fromUser($user);
 
+         // ── Log ──
+        activity()
+            ->causedBy(Auth::user())
+            ->performedOn($user)
+            ->withProperties(['new_admin_email' => $user->email])
+            ->log('Nouvel administrateur créé');
+
         // Retourner un message de succès
         return response()->json([
             'success' => true,
@@ -433,6 +540,15 @@ class AuthController extends Controller
 
         // Mettre à jour les informations de l'utilisateur
         $user->update($request->only('FirstName', 'LastName', 'Adress', 'Phone', 'email'));
+
+        // ── Log ──
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        activity()
+            ->causedBy($user)
+            ->performedOn($user)
+            ->withProperties($request->only('FirstName', 'LastName', 'Adress', 'Phone', 'email'))
+            ->log('Profil utilisateur mis à jour');
 
         // Retourner un message de succès
         return response()->json([
@@ -527,6 +643,12 @@ class AuthController extends Controller
             // Si l'utilisateur existe déjà, générer un token JWT et le renvoyer
             $jwtToken = JWTAuth::fromUser($user);
 
+            // ── Log ──
+            activity()
+                ->causedBy($user)
+                ->withProperties(['provider' => 'google', 'ip' => $request->ip()])
+                ->log('Connexion via Google');
+
             return response()->json([
                 'success' => true,
                 'message' => 'Connexion avec Google réussie !',
@@ -591,6 +713,14 @@ class AuthController extends Controller
             // Générer un token JWT pour l'utilisateur nouvellement créé
             $jwtToken = JWTAuth::fromUser($user);
 
+            // ── Log ──
+            activity()
+                ->causedBy($user)
+                ->performedOn($user)
+                ->withProperties(['provider' => 'google', 'email' => $user->email])
+                ->log('Compte créé via Google');
+
+
             return response()->json([
                 'success' => true,
                 'message' => 'Compte créé avec succès !',
@@ -646,6 +776,16 @@ class AuthController extends Controller
             $fileName = 'qr_codes/' . $user->id . '_qr.png';
             Storage::disk('public')->put($fileName, $qrCodeImage);
 
+             // ── Log (AVANT le return) ──
+            activity()
+                ->causedBy($user)
+                ->performedOn($user)
+                ->withProperties([
+                    'new_expiration' => $newExpirationDate,
+                    'user_id'        => $user->id,
+                ])
+                ->log('QR Code renouvelé');
+
             // Logger l'action
             Log::info('QR code renouvelé avec succès pour l\'utilisateur', [
                 'user_id' => $user->id,
@@ -671,6 +811,7 @@ class AuthController extends Controller
                 'message' => 'Erreur lors du renouvellement du QR code.',
             ], 500);
         }
+
     }
 
 }

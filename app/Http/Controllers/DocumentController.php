@@ -2,36 +2,35 @@
 
 namespace App\Http\Controllers;
 
-use GuzzleHttp\Client;
+use App\Events\NewNotificationEvent;
+use App\Http\Requests\StoreDocumentRequest;
+use App\Http\Requests\UpdateDocumentRequest;
+use App\Mail\DocumentPublishedNotification;
+use App\Models\DeclarationDePerte;
 use App\Models\Document;
 use App\Models\EmailLog;
 use App\Models\Notification;
+use App\Notifications\RestitutionRequestNotification;
+use App\Services\EmailNotificationService;
+use App\Services\ImageService;
 use App\Services\SmsService;
+use GuzzleHttp\Client;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Symfony\Component\Clock\now;
-use App\Models\DeclarationDePerte;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Events\NewNotificationEvent;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Cache;
-use Intervention\Image\Facades\Image;
-use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Facades\Storage;
-use App\Services\ImageService;
-use App\Services\EmailNotificationService;
-use App\Http\Requests\StoreDocumentRequest;
-use App\Mail\DocumentPublishedNotification;
-use App\Http\Requests\UpdateDocumentRequest;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Notifications\RestitutionRequestNotification;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+
 
 class DocumentController extends Controller
 {
-    use SoftDeletes;
+    use SoftDeletes; use InteractsWithMedia;
+
     /**
      * Afficher tous les documents
      */
@@ -103,6 +102,18 @@ class DocumentController extends Controller
         //     'message' => 'Un nouveau document a été publié : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
         //     'is_read' => false,
         // ]);
+
+        // ── Log d'activité ──
+        activity()
+            ->causedBy(Auth::user())
+            ->performedOn($document)
+            ->withProperties([
+                'OwnerFirstName'   => $document->OwnerFirstName,
+                'OwnerLastName'    => $document->OwnerLastName,
+                'document_type_id' => $document->document_type_id,
+                'Location'         => $document->Location,
+            ])
+            ->log('Document publié');
 
         // Recherche des déclarations correspondantes
         $declarations = DeclarationDePerte::whereRaw('LOWER(FirstNameInDoc) = ?', [strtolower($document->OwnerFirstName)])
@@ -324,6 +335,17 @@ class DocumentController extends Controller
          // Appel à la méthode pour l'envoi de SMS
         $this->sendSMS($phoneNumber, $message);
 
+        // ── Log d'activité (AVANT le return) ──
+        activity()
+            ->causedBy($fromUser)
+            ->performedOn($document)
+            ->withProperties([
+                'document_uuid'  => $document->uuid,
+                'from_user_id'   => $fromUser->id,
+                'to_user_id'     => $toUser->id,
+            ])
+            ->log('Demande de restitution envoyée');
+
         // Retourner une réponse JSON
         return response()->json(['message' => 'Demande de restitution envoyée avec succès.']);
     }
@@ -357,6 +379,13 @@ class DocumentController extends Controller
         $validatedData = $request->validated();
         $document->update($validatedData);
 
+        // ── Log d'activité ──
+        activity()
+            ->causedBy(Auth::user())
+            ->performedOn($document)
+            ->withProperties($validatedData)
+            ->log('Document mis à jour');
+
         return response()->json([
             'success' => true,
             'message' => 'Document mis à jour avec succès.',
@@ -368,30 +397,45 @@ class DocumentController extends Controller
     /**
      * Suppression de suppression de document
      */
-    public function destroy($uuid) // Changé de $id à $uuid
+    public function destroy($uuid)
     {
         $user = Auth::user();
 
         if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous devez être authentifié pour effectuer cette action.'
+                'message' => 'Vous devez être authentifié pour effectuer cette action.',
             ], 401);
         }
 
-        $document = Document::findOrFail($uuid); // À ajuster pour utiliser where('uuid', $uuid)
+        // BUG CORRIGÉ : était findOrFail($uuid) ce qui cherchait par ID
+        $document = Document::where('uuid', $uuid)->firstOrFail();
 
         if ($user->hasRole('Admin') || $document->user_id === $user->id) {
+
+            // ── Log d'activité ──
+             /** @var \App\Models\User $user */
+            $user = Auth::user();
+            activity()
+                ->causedBy($user)
+                ->performedOn($document)
+                ->withProperties([
+                    'document_uuid' => $document->uuid,
+                    'deleted_by'    => $user->id,
+                ])
+                ->log('Document supprimé');
+
             $document->delete();
+
             return response()->json([
                 'success' => true,
-                'message' => 'Publication supprimée avec succès.'
+                'message' => 'Publication supprimée avec succès.',
             ]);
         }
 
         return response()->json([
             'success' => false,
-            'message' => 'Accès refusé. Vous ne pouvez supprimer que vos propres publications.'
+            'message' => 'Accès refusé. Vous ne pouvez supprimer que vos propres publications.',
         ], 403);
     }
 
@@ -411,6 +455,17 @@ class DocumentController extends Controller
         $document = Document::onlyTrashed()->where('uuid', $uuid)->firstOrFail();
 
         if ($document->user_id === $user->id) {
+                // ── Log d'activité ──
+                /** @var \App\Models\User $user */
+                $user = Auth::user();
+                activity()
+                ->causedBy($user)
+                ->performedOn($document)
+                ->withProperties([
+                    'document_uuid' => $document->uuid,
+                    'restored_by'   => $user->id,
+                ])
+                ->log('Document restauré');
             $document->restore();
             return response()->json([
                 'success' => true,
