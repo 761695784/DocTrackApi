@@ -12,140 +12,238 @@ use App\Models\EmailLog;
 use App\Models\Notification;
 use App\Notifications\RestitutionRequestNotification;
 use App\Services\EmailNotificationService;
-use App\Services\ImageService;
+// use App\Services\ImageService;
 use App\Services\SmsService;
 use GuzzleHttp\Client;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
+// use Illuminate\Support\Facades\Log;
+// use Illuminate\Support\Facades\Storage;
+use App\Http\Resources\DocumentResource;
 
 
 class DocumentController extends Controller
 {
-    use SoftDeletes; use InteractsWithMedia;
-
     /**
      * Afficher tous les documents
      */
     public function index()
     {
-        $user = Auth::user(); // Récupérer l'utilisateur authentifié
+        $user = Auth::user();
 
-        // Si l'utilisateur est un admin, récupérer tous les documents (y compris ceux supprimés)
         if ($user && $user->hasRole('Admin')) {
-            $documents = Document::withTrashed()->with(['user', 'documentType'])->get();
+            $documents = Document::withTrashed()
+                ->with(['user', 'documentType'])
+                ->get();
         } else {
-            // Récupère uniquement les documents actifs (non supprimés)
-            $documents = Document::whereNull('deleted_at')->with(['user', 'documentType'])->get();
+            $documents = Document::whereNull('deleted_at')
+                ->with(['user', 'documentType'])
+                ->get();
         }
 
-        // Retourne les documents en JSON, y compris les informations de l'utilisateur et du type de document
-        return response()->json($documents);
+        return DocumentResource::collection($documents);
     }
+    // public function index()
+    // {
+    //     $user = Auth::user(); // Récupérer l'utilisateur authentifié
+
+    //     // Si l'utilisateur est un admin, récupérer tous les documents (y compris ceux supprimés)
+    //     if ($user && $user->hasRole('Admin')) {
+    //         $documents = Document::withTrashed()->with(['user', 'documentType'])->get();
+    //     } else {
+    //         // Récupère uniquement les documents actifs (non supprimés)
+    //         $documents = Document::whereNull('deleted_at')->with(['user', 'documentType'])->get();
+    //     }
+
+    //     // Retourne les documents en JSON, y compris les informations de l'utilisateur et du type de document
+    //     return response()->json($documents);
+    // }
 
     // Afficher toutes les publications y compris celles supprimer en soft
     public function getAllPublications(Request $request)
     {
-        // Vérifie si l'utilisateur est connecté
-        if (Auth::check()) {
-            // Récupère toutes les publications, y compris les supprimées (soft deleted)
-            $documents = Document::withTrashed()->with(['user', 'documentType'])->get(); // Inclut les soft deletes et les infos de l'utilisateur
-
-            return response()->json($documents); // Retourne le tableau directement
-        } else {
-            // Si l'utilisateur n'est pas connecté, retourne un message d'erreur
-            return response()->json([
-                'success' => false,
-                'message' => 'Utilisateur non authentifié',
-            ], 401); // Code 401 pour l'authentification non autorisée
+        if (!Auth::check()) {
+            return response()->json(['success' => false, 'message' => 'Non authentifié.'], 401);
         }
+
+        $documents = Document::withTrashed()
+            ->with(['user', 'documentType'])
+            ->get();
+
+        return DocumentResource::collection($documents);
     }
+    //  public function getAllPublications(Request $request)
+    // {
+    //     // Vérifie si l'utilisateur est connecté
+    //     if (Auth::check()) {
+    //         // Récupère toutes les publications, y compris les supprimées (soft deleted)
+    //         $documents = Document::withTrashed()->with(['user', 'documentType'])->get(); // Inclut les soft deletes et les infos de l'utilisateur
+
+    //         return response()->json($documents); // Retourne le tableau directement
+    //     } else {
+    //         // Si l'utilisateur n'est pas connecté, retourne un message d'erreur
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Utilisateur non authentifié',
+    //         ], 401); // Code 401 pour l'authentification non autorisée
+    //     }
+    // }
 
 
     /**
      * Creer une nouvelle publication
      */
 
-    public function store(StoreDocumentRequest $request, ImageService $imageService, EmailNotificationService $emailService, SmsService $smsService)
+    // public function store(StoreDocumentRequest $request, ImageService $imageService, EmailNotificationService $emailService, SmsService $smsService)
+    // {
+    //     // Valider la demande et récupérer le fichier image
+    //     $validatedData = $request->validated();
+    //     $document = new Document();
+    //     $document->fill([
+    //         'OwnerFirstName' => $validatedData['OwnerFirstName'],
+    //         'OwnerLastName' => $validatedData['OwnerLastName'],
+    //         'Location' => $validatedData['Location'],
+    //         'statut' => 'non récupéré', // Valeur par défaut
+    //         'document_type_id' => $validatedData['document_type_id'],
+    //         'user_id' => Auth::id(),
+    //     ]);
+    //     // Conversion image
+    //     if ($request->hasFile('image') && $request->file('image')->isValid()) {
+    //         $fileName = time() . '_' . $request->file('image')->getClientOriginalName();
+    //         $path = 'documents/' . $fileName;
+    //         $document->image = $imageService->convertToWebP($request->file('image'), $path);
+    //     } else {
+    //         return response()->json(['error' => 'Aucun fichier image valide fourni'], 400);
+    //     }
+
+    //     $document->save();
+
+    //     // Notifier l'admin
+    //     // Notification::create([
+    //     //     'message' => 'Un nouveau document a été publié : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
+    //     //     'is_read' => false,
+    //     // ]);
+
+    //     // ── Log d'activité ──
+    //     activity()
+    //         ->causedBy(Auth::user())
+    //         ->performedOn($document)
+    //         ->withProperties([
+    //             'OwnerFirstName'   => $document->OwnerFirstName,
+    //             'OwnerLastName'    => $document->OwnerLastName,
+    //             'document_type_id' => $document->document_type_id,
+    //             'Location'         => $document->Location,
+    //         ])
+    //         ->log('Document publié');
+
+    //     // Recherche des déclarations correspondantes
+    //     $declarations = DeclarationDePerte::whereRaw('LOWER(FirstNameInDoc) = ?', [strtolower($document->OwnerFirstName)])
+    //         ->whereRaw('LOWER(LastNameInDoc) = ?', [strtolower($document->OwnerLastName)])
+    //         ->get();
+
+    //         foreach ($declarations as $declaration) {
+    //             $declarant = $declaration->user;
+    //             $phone = $declarant->Phone;
+    //             $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->uuid;
+
+    //             // Envoi email + log
+    //             $emailService->notifyDeclarant($document, $declarant, $phone, $documentUrl);
+
+    //             // Envoi SMS via ton SmsService déjà existant
+    //             $smsService->sendSMS($phone, 'Un document correspondant à votre déclaration de perte a été trouvé : ' .
+    //                 $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl
+    //             );
+    //         // Notification pour l'utilisateur
+    //         Notification::create([
+    //             'message' => 'Un document correspondant à une déclaration a été trouvé : ' .
+    //                          $document->OwnerFirstName . ' ' . $document->OwnerLastName,
+    //             'is_read' => false,
+    //         ]);
+    //     }
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Document créé avec succès.',
+    //         'document' => $document
+    //     ], 201);
+    // }
+
+    public function store(StoreDocumentRequest $request,EmailNotificationService $emailService,SmsService $smsService)
     {
-        // Valider la demande et récupérer le fichier image
-        $validatedData = $request->validated();
-        $document = new Document();
-        $document->fill([
-            'OwnerFirstName' => $validatedData['OwnerFirstName'],
-            'OwnerLastName' => $validatedData['OwnerLastName'],
-            'Location' => $validatedData['Location'],
-            'statut' => 'non récupéré', // Valeur par défaut
-            'document_type_id' => $validatedData['document_type_id'],
-            'user_id' => Auth::id(),
-        ]);
-        // Conversion image
-        if ($request->hasFile('image') && $request->file('image')->isValid()) {
-            $fileName = time() . '_' . $request->file('image')->getClientOriginalName();
-            $path = 'documents/' . $fileName;
-            $document->image = $imageService->convertToWebP($request->file('image'), $path);
-        } else {
-            return response()->json(['error' => 'Aucun fichier image valide fourni'], 400);
-        }
+    $validatedData = $request->validated();
 
-        $document->save();
-
-        // Notifier l'admin
-        // Notification::create([
-        //     'message' => 'Un nouveau document a été publié : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
-        //     'is_read' => false,
-        // ]);
-
-        // ── Log d'activité ──
-        activity()
-            ->causedBy(Auth::user())
-            ->performedOn($document)
-            ->withProperties([
-                'OwnerFirstName'   => $document->OwnerFirstName,
-                'OwnerLastName'    => $document->OwnerLastName,
-                'document_type_id' => $document->document_type_id,
-                'Location'         => $document->Location,
-            ])
-            ->log('Document publié');
-
-        // Recherche des déclarations correspondantes
-        $declarations = DeclarationDePerte::whereRaw('LOWER(FirstNameInDoc) = ?', [strtolower($document->OwnerFirstName)])
-            ->whereRaw('LOWER(LastNameInDoc) = ?', [strtolower($document->OwnerLastName)])
-            ->get();
-
-            foreach ($declarations as $declaration) {
-                $declarant = $declaration->user;
-                $phone = $declarant->Phone;
-                $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->uuid;
-
-                // Envoi email + log
-                $emailService->notifyDeclarant($document, $declarant, $phone, $documentUrl);
-
-                // Envoi SMS via ton SmsService déjà existant
-                $smsService->sendSMS($phone, 'Un document correspondant à votre déclaration de perte a été trouvé : ' .
-                    $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl
-                );
-            // Notification pour l'utilisateur
-            Notification::create([
-                'message' => 'Un document correspondant à une déclaration a été trouvé : ' .
-                             $document->OwnerFirstName . ' ' . $document->OwnerLastName,
-                'is_read' => false,
-            ]);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Document créé avec succès.',
-            'document' => $document
-        ], 201);
+    // ── Vérifie l'image AVANT de créer le document ──
+    if (!$request->hasFile('image') || !$request->file('image')->isValid()) {
+        return response()->json(['error' => 'Aucun fichier image valide fourni'], 400);
     }
+
+    // ── Crée le document SANS image ──
+    $document = Document::create([
+        'OwnerFirstName'    => $validatedData['OwnerFirstName'],
+        'OwnerLastName'     => $validatedData['OwnerLastName'],
+        'Location'          => $validatedData['Location'],
+        'statut'            => 'non récupéré',
+        'document_type_id'  => $validatedData['document_type_id'],
+        'user_id'           => Auth::id(),
+        'DocIdentification' => $validatedData['DocIdentification'] ?? null,
+    ]);
+
+    // ── Upload + conversions via MediaLibrary ──
+    $document->addMediaFromRequest('image')
+             ->toMediaCollection('document_image');
+    // → génère automatiquement : thumb, blurred, optimized en WebP
+
+    // ── Log d'activité ──
+    activity()
+        ->causedBy(Auth::user())
+        ->performedOn($document)
+        ->withProperties([
+            'OwnerFirstName'   => $document->OwnerFirstName,
+            'OwnerLastName'    => $document->OwnerLastName,
+            'document_type_id' => $document->document_type_id,
+            'Location'         => $document->Location,
+        ])
+        ->log('Document publié');
+
+    // ── Notifications ──
+    $declarations = DeclarationDePerte::whereRaw(
+        'LOWER(FirstNameInDoc) = ?', [strtolower($document->OwnerFirstName)]
+    )
+    ->whereRaw(
+        'LOWER(LastNameInDoc) = ?', [strtolower($document->OwnerLastName)]
+    )
+    ->get();
+
+    foreach ($declarations as $declaration) {
+        $declarant   = $declaration->user;
+        $phone       = $declarant->Phone;
+        $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->uuid;
+
+        $emailService->notifyDeclarant($document, $declarant, $phone, $documentUrl);
+        $smsService->sendSMS(
+            $phone,
+            'Un document correspondant à votre déclaration a été trouvé : ' .
+            $document->OwnerFirstName . ' ' . $document->OwnerLastName .
+            '. Consultez-le ici : ' . $documentUrl
+        );
+
+        Notification::create([
+            'message'                => 'Un document correspondant a été trouvé : ' .
+                                       $document->OwnerFirstName . ' ' . $document->OwnerLastName,
+            'is_read'                => false,
+            'declaration_de_perte_id'=> $declaration->id,
+        ]);
+    }
+
+    return response()->json([
+        'success'  => true,
+        'message'  => 'Document créé avec succès.',
+        'document' => new DocumentResource($document->load(['user', 'documentType'])),
+    ], 201);
+}
 
      // Méthode pour envoyer un SMS via l'API Orange
     // protected function sendSMS($phoneNumber, $message)
@@ -353,14 +451,24 @@ class DocumentController extends Controller
      /**
      * Afficher le document specifique.
      */
-    public function show($uuid) // Changé de $id à $uuid
+    public function show($uuid)
     {
-        $document = Document::with(['user', 'documentType'])->where('uuid', $uuid)->firstOrFail();
-                if (!$document) {
-            return response()->json(['message' => 'Document not found'], 404);
-        }
-        return response()->json($document);
+        $document = Document::with(['user', 'documentType'])
+            ->where('uuid', $uuid)
+            ->firstOrFail();
+
+        return new DocumentResource($document);
     }
+
+
+    // public function show($uuid) // Changé de $id à $uuid
+    // {
+    //     $document = Document::with(['user', 'documentType'])->where('uuid', $uuid)->firstOrFail();
+    //             if (!$document) {
+    //         return response()->json(['message' => 'Document not found'], 404);
+    //     }
+    //     return response()->json($document);
+    // }
 
     /**
      * Mise à jour de document
@@ -507,12 +615,20 @@ class DocumentController extends Controller
     // Fonction pour obtenir uniquement les documents de l'utilisateur connecté
     public function OwnPub()
     {
-        // Récupère uniquement les documents de l'utilisateur connecté
-        $documents = Document::where('user_id', Auth::id())->with(['user', 'documentType'])->get();
+        $documents = Document::where('user_id', Auth::id())
+            ->with(['user', 'documentType'])
+            ->get();
 
-        // Retourne les documents en JSON, y compris les informations de l'utilisateur
-        return response()->json($documents);
+        return DocumentResource::collection($documents);
     }
+    // public function OwnPub()
+    // {
+    //     // Récupère uniquement les documents de l'utilisateur connecté
+    //     $documents = Document::where('user_id', Auth::id())->with(['user', 'documentType'])->get();
+
+    //     // Retourne les documents en JSON, y compris les informations de l'utilisateur
+    //     return response()->json($documents);
+    // }
 
 
     // Fonction pour obtenir uniquement les documents supprimés

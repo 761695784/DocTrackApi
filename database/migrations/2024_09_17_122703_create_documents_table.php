@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();// Colonne UUID avec contrainte d'unicité
-            $table->string('image');
+            // $table->string('image');
             $table->string('OwnerFirstName')->nullable();
             $table->string('OwnerLastName')->nullable();
             $table->string('DocIdentification')->nullable();
