@@ -49,8 +49,8 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/activity-logs', [AuthController::class, 'getActivityLogs']);
     Route::get('/activity-logs/{subject_type}', [AuthController::class, 'getLogsByType']);
     Route::get('/admin/certificats', [CertificatDePerteController::class, 'index']);
-    Route::get('/certificats/{slug}/telecharger', [CertificatDePerteController::class, 'telecharger']);
     Route::get('/certificats/{slug}/voir', [CertificatDePerteController::class, 'voir']);
+    Route::get('/certificats/{slug}/telecharger', [CertificatDePerteController::class, 'telecharger']);
 
 
     // Routes pour les documents
@@ -71,7 +71,6 @@ Route::middleware('auth:api')->group(function () {
     Route::get('trashed-declarations', [DeclarationDePerteController::class, 'trashedDeclarations']);
     Route::post('declarations/restore/{slug}', [DeclarationDePerteController::class, 'restoreTrashedDeclaration']);
     Route::get('my-declarations', [DeclarationDePerteController::class, 'getUserDeclarations']);
-    Route::get('/certificats/{slug}/voir', [CertificatDePerteController::class, 'voir']);
 
     // Routes pour les commentaires
     Route::apiResource('comments', CommentaireController::class);
