@@ -1,15 +1,16 @@
 <?php
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BackupController;
+use App\Http\Controllers\CertificatDePerteController;
+use App\Http\Controllers\CommentaireController;
+use App\Http\Controllers\DeclarationDePerteController;
+use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\DocumentTypeController;
+use App\Http\Controllers\EmailVerificationController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\QrCodeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\CertificatDePerteController;
-use App\Http\Controllers\QrCodeController;
-use App\Http\Controllers\DocumentController;
-use App\Http\Controllers\CommentaireController;
-use App\Http\Controllers\DocumentTypeController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\DeclarationDePerteController;
-use App\Http\Controllers\EmailVerificationController;
 
 // Routes publiques (aucune authentification requise)
 Route::post('register', [AuthController::class, 'register']);
@@ -95,6 +96,12 @@ Route::middleware('auth:api')->group(function () {
     Route::get('deleted-documents', [DocumentController::class, 'getDeletedDocuments']);
     Route::get('recovered-documents', [DocumentController::class, 'getRecoveredDocuments']);
     Route::get('not-recovered-documents', [DocumentController::class, 'getNotRecoveredDocuments']);
+
+    Route::post('/backup/run',     [BackupController::class, 'runBackup']);
+    Route::get('/backup/list',     [BackupController::class, 'listBackups']);
+    Route::get('/backup/status',   [BackupController::class, 'backupStatus']);
+    Route::post('/backup/clean',   [BackupController::class, 'cleanBackups']);
+    Route::get('/backup/download', [BackupController::class, 'downloadBackup']);
 });
 
 // Routes pour les types de documents (protégées)
