@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\NewNotificationEvent;
 use App\Http\Requests\StoreDocumentRequest;
 use App\Http\Requests\UpdateDocumentRequest;
+use App\Http\Resources\DocumentResource;
 use App\Mail\DocumentPublishedNotification;
 use App\Models\DeclarationDePerte;
 use App\Models\Document;
@@ -12,7 +13,6 @@ use App\Models\EmailLog;
 use App\Models\Notification;
 use App\Notifications\RestitutionRequestNotification;
 use App\Services\EmailNotificationService;
-// use App\Services\ImageService;
 use App\Services\SmsService;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
@@ -20,10 +20,9 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-// use Illuminate\Support\Facades\Log;
-// use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\DocumentResource;
-
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class DocumentController extends Controller
 {
@@ -800,8 +799,6 @@ class DocumentController extends Controller
      /**
      * Fonction pour obtenir les coordonnées d'une ville
      */
-    private const CACHE_TTL_SECONDS = 172800; //Durée de mise en cache des coordonnées (48 heures en secondes)
-    private const OPENCAGE_API_URL = 'https://api.opencagedata.com/geocode/v1/json'; // URL de l'API OpenCage Geocoding.
 
     /**
      * Récupère les coordonnées géographiques (latitude, longitude) d'une localité.
@@ -809,91 +806,57 @@ class DocumentController extends Controller
      * @param string $location Nom de la localité (ex. "Dakar")
      * @return array Tableau contenant latitude, longitude et un message d'erreur éventuel
      */
-    public function getCoordinates(string $location): array
+    private function getCoordinates(string $location): array
     {
-        $cacheKey = "coordinates_{$location}";
+        $cacheKey = 'coords_' . Str::slug($location);
 
-        // Vérifier le cache
-        if (Cache::has($cacheKey)) {
-            $coordinates = Cache::get($cacheKey);
-            // Log::info("Coordinates retrieved from cache for {$location}", $coordinates);
-            return $coordinates;
-        }
+        return Cache::remember($cacheKey, now()->addDays(30), function() use ($location) {
+            try {
+                $response = Http::withoutVerifying() // ← désactive SSL en local
+                    ->withHeaders([
+                        'User-Agent' => 'MonApp/1.0 (contact@monapp.com)',
+                    ])
+                    ->get('https://nominatim.openstreetmap.org/search', [
+                        'q'      => $location . ', Sénégal',
+                        'format' => 'json',
+                        'limit'  => 1,
+                    ]);
 
-        // Ajouter le contexte géographique (Sénégal)
-        $queryLocation = "{$location}, Senegal";
+                if ($response->successful() && !empty($response->json())) {
+                    $data = $response->json()[0];
+                    return [
+                        'latitude'  => (float) $data['lat'],
+                        'longitude' => (float) $data['lon'],
+                    ];
+                }
 
-        try {
-            $client = new Client();
-            $response = $client->get(self::OPENCAGE_API_URL, [
-                'query' => [
-                    'q' => $queryLocation,
-                    'key' => config('services.opencage.api_key'),
-                    'countrycode' => 'SN',
-                    'limit' => 1,
-                ],
-            ]);
-
-            $data = json_decode($response->getBody(), true);
-            // Log::info("OpenCage API response for {$queryLocation}", $data);
-
-            if (!empty($data['results'])) {
-                $coordinates = [
-                    'latitude' => $data['results'][0]['geometry']['lat'] ?? null,
-                    'longitude' => $data['results'][0]['geometry']['lng'] ?? null,
-                ];
-
-                // Mettre en cache les coordonnées
-                Cache::put($cacheKey, $coordinates, self::CACHE_TTL_SECONDS);
-                // Log::info("Coordinates cached for {$queryLocation}", $coordinates);
-
-                return $coordinates;
+            } catch (\Exception $e) {
+                Log::error("Geocoding error for '$location': " . $e->getMessage());
             }
 
-            // Log::warning("No geocoding results found for {$queryLocation}");
-            return [
-                'latitude' => null,
-                'longitude' => null,
-                'error' => 'No results found for the location.',
-            ];
-        } catch (\Exception $e) {
-            // Log::error("Error fetching coordinates for {$queryLocation}: {$e->getMessage()}");
-            return [
-                'latitude' => null,
-                'longitude' => null,
-                'error' => "Failed to fetch coordinates: {$e->getMessage()}",
-            ];
-        }
+            return ['latitude' => null, 'longitude' => null];
+        });
     }
-
      // Méthode pour récupérer les publications et leurs coordonnées
-     public function getPublicationsByLocation()
-        {
-            $localities = Document::distinct()->pluck('Location');
+    public function getPublicationsByLocation()
+    {
+        $publications = Document::select('Location', DB::raw('COUNT(*) as publications'))
+            ->groupBy('Location')
+            ->get();
 
-            $regions = $localities->map(function($location) {
-                // Vérifie ou génère les coordonnées
-                $coords = $this->getCoordinates($location);
+        $regions = $publications->map(function($item) {
+            $coords = $this->getCoordinates($item->Location);
 
-                return [
-                    'name' => $location,
-                    'latitude' => $coords['latitude'],
-                    'longitude' => $coords['longitude'],
-                ];
-            });
+            return [
+                'name'         => $item->Location,
+                'latitude'     => $coords['latitude'],
+                'longitude'    => $coords['longitude'],
+                'publications' => $item->publications,
+            ];
+        });
 
-            $publications = Document::select('Location', DB::raw('COUNT(*) as publications'))
-                            ->groupBy('Location')
-                            ->get()
-                            ->keyBy('Location');
-
-            $regions = $regions->map(function($region) use ($publications) {
-                $region['publications'] = $publications[$region['name']]->publications ?? 0;
-                return $region;
-            });
-
-            return response()->json($regions);
-     }
+        return response()->json($regions->values());
+    }
 
 //     public function getCoordinates($location)
 // {
