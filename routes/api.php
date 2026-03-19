@@ -9,7 +9,6 @@ use App\Http\Controllers\DocumentTypeController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\QrCodeController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Routes publiques (aucune authentification requise)
