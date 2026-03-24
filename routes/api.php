@@ -9,6 +9,7 @@ use App\Http\Controllers\DocumentTypeController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\QrCodeController;
+use App\Http\Controllers\RapportController;
 use Illuminate\Support\Facades\Route;
 
 // Routes publiques (aucune authentification requise)
@@ -106,3 +107,28 @@ Route::middleware('auth:api')->group(function () {
 // Routes pour les types de documents (protégées)
 Route::apiResource('document-types', DocumentTypeController::class)->middleware('auth:api');
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ROUTES RAPPORT INSTITUTIONNEL — à ajouter dans routes/api.php
+// dans le groupe Route::middleware('auth:api')->group(function () { ... })
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Importer en haut du fichier api.php :
+Route::prefix('rapports')->group(function () {
+
+    // Lister tous les rapports générés
+    Route::get('/',                         [RapportController::class, 'index']);
+
+    // Données JSON pour le dashboard Angular (sans générer de PDF)
+    Route::get('/stats',                    [RapportController::class, 'stats']);
+
+    // Générer un nouveau rapport + PDF et le sauvegarder
+    Route::post('/generer',                 [RapportController::class, 'generer']);
+
+    // Aperçu PDF live (sans sauvegarder en base)
+    Route::get('/apercu',                   [RapportController::class, 'apercu']);
+
+    // Actions sur un rapport existant (par UUID)
+    Route::get('/{uuid}/voir',              [RapportController::class, 'voir']);
+    Route::get('/{uuid}/telecharger',       [RapportController::class, 'telecharger']);
+    Route::delete('/{uuid}',                [RapportController::class, 'destroy']);
+});

@@ -13,7 +13,6 @@ use App\Models\EmailLog;
 use App\Models\Notification;
 use App\Notifications\RestitutionRequestNotification;
 use App\Services\EmailNotificationService;
-use App\Services\SmsService;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -23,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use App\Services\SmsService;
 
 class DocumentController extends Controller
 {
@@ -430,7 +430,8 @@ class DocumentController extends Controller
         $message = 'Bonjour, vous avez une demande de restitution pour le document : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
 
          // Appel à la méthode pour l'envoi de SMS
-        $this->sendSMS($phoneNumber, $message);
+        // $this->sendSMS($phoneNumber, $message);
+        //  $smsService->sendSMS($toUser->Phone, $message);
 
         // ── Log d'activité (AVANT le return) ──
         activity()
