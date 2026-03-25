@@ -6,38 +6,25 @@
     <title>{{ $meta['type'] }} DocTrack — {{ $stats['periode'] }}</title>
     <style>
         /* =====================================================================
-           RESET & BASE
+           RESET & BASE — DocTrack Palette
+           Primaire  : #31287C (violet institutionnel)
+           Accent    : #F6A500 (orange DocTrack)
+           Foncé     : #1e1a5c
+           Surface   : #f4f3fb
+           Vert      : #15803d
+           Rouge     : #c62828
+           Gris      : #64748b
         ===================================================================== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: "DejaVu Sans", sans-serif;
+            font-family: "DejaVu Sans", Arial, sans-serif;
             font-size: 9.5pt;
-            color: #1a1a2e;
+            color: #1e1a3f;
             background: #ffffff;
             line-height: 1.55;
         }
 
-        /* =====================================================================
-           VARIABLES DE COULEUR (simulées via classes)
-        ===================================================================== */
-        /* Palette officielle DocTrack */
-        /* Primaire : #0f3460 (bleu marine institutionnel) */
-        /* Accent   : #16213e  */
-        /* Or       : #e2b04a  */
-        /* Vert     : #16a34a  */
-        /* Orange   : #ea580c  */
-        /* Rouge    : #dc2626  */
-        /* Gris     : #64748b  */
-        /* Fond     : #f8fafc  */
-
-        /* =====================================================================
-           PAGE
-        ===================================================================== */
         @page {
             margin: 0;
             size: A4 portrait;
@@ -46,279 +33,289 @@
         .page {
             width: 210mm;
             min-height: 297mm;
-            position: relative;
             background: #ffffff;
+            position: relative;
         }
 
         /* =====================================================================
            EN-TÊTE OFFICIEL
         ===================================================================== */
         .header {
-            background: #0f3460;
-            padding: 0;
+            background: #31287C;
             position: relative;
             overflow: hidden;
         }
 
-        .header-bande-or {
-            height: 5px;
-            background: linear-gradient(90deg, #e2b04a 0%, #f0c96a 50%, #e2b04a 100%);
+        /* Bande orange supérieure */
+        .header-bande-top {
+            height: 6px;
+            background: #F6A500;
+        }
+
+        /* Motif décoratif (cercles subtils) */
+        .header-deco-cercle {
+            position: absolute;
+            right: -30px;
+            top: -30px;
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: rgba(246,165,0,0.08);
+            pointer-events: none;
+        }
+
+        .header-deco-cercle-2 {
+            position: absolute;
+            right: 60px;
+            top: -50px;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(246,165,0,0.05);
+            pointer-events: none;
         }
 
         .header-content {
-            padding: 18px 28px 16px 28px;
+            padding: 20px 28px 18px;
             display: table;
             width: 100%;
+            position: relative;
+            z-index: 1;
         }
 
-        .header-left {
-            display: table-cell;
-            vertical-align: middle;
-            width: 65%;
-        }
-
-        .header-right {
-            display: table-cell;
-            vertical-align: middle;
-            text-align: right;
-            width: 35%;
-        }
+        .header-left  { display: table-cell; vertical-align: middle; width: 62%; }
+        .header-right { display: table-cell; vertical-align: middle; text-align: right; width: 38%; }
 
         .header-republique {
-            font-size: 7pt;
-            color: #a8c4e0;
-            letter-spacing: 1.5px;
+            font-size: 6.5pt;
+            color: rgba(255,255,255,0.5);
+            letter-spacing: 2px;
             text-transform: uppercase;
-            margin-bottom: 2px;
+            margin-bottom: 3px;
         }
 
         .header-pays {
             font-size: 8pt;
-            color: #e2b04a;
+            color: #F6A500;
             font-weight: bold;
-            letter-spacing: 0.8px;
+            letter-spacing: 1px;
             text-transform: uppercase;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
 
-        .header-plateforme {
-            font-size: 22pt;
+        .header-logo-text {
+            font-size: 26pt;
             font-weight: bold;
             color: #ffffff;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
             line-height: 1;
         }
 
-        .header-plateforme span {
-            color: #e2b04a;
-        }
+        .header-logo-text span { color: #F6A500; }
 
         .header-slogan {
-            font-size: 7.5pt;
-            color: #90aec4;
-            margin-top: 4px;
+            font-size: 7pt;
+            color: rgba(255,255,255,0.5);
+            margin-top: 5px;
             font-style: italic;
+            letter-spacing: 0.3px;
         }
 
+        /* Badge type rapport */
         .header-badge-type {
             display: inline-block;
-            background: #e2b04a;
-            color: #0f3460;
+            background: #F6A500;
+            color: #31287C;
             font-size: 7pt;
             font-weight: bold;
-            padding: 3px 10px;
-            letter-spacing: 1px;
+            padding: 3px 12px;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
             border-radius: 2px;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
 
-        .header-numero {
-            font-size: 7pt;
-            color: #90aec4;
+        .header-ref {
+            font-size: 6.5pt;
+            color: rgba(255,255,255,0.45);
             margin-bottom: 2px;
+            letter-spacing: 0.3px;
         }
 
         .header-date {
             font-size: 7pt;
-            color: #a8c4e0;
+            color: rgba(255,255,255,0.6);
         }
 
+        /* Barre dégradée basse */
         .header-bande-bas {
             height: 3px;
-            background: linear-gradient(90deg, #e2b04a, #0f3460 40%);
+            background: linear-gradient(90deg, #F6A500 0%, #31287C 60%);
         }
 
         /* =====================================================================
-           BANDEAU PÉRIODE + NIVEAU GLOBAL
+           BANDEAU PÉRIODE
         ===================================================================== */
         .bandeau-periode {
-            background: #16213e;
-            padding: 10px 28px;
+            background: #1e1a5c;
+            padding: 11px 28px;
             display: table;
             width: 100%;
         }
 
-        .bandeau-left {
-            display: table-cell;
-            vertical-align: middle;
-        }
-
-        .bandeau-right {
-            display: table-cell;
-            vertical-align: middle;
-            text-align: right;
-        }
+        .bandeau-left  { display: table-cell; vertical-align: middle; }
+        .bandeau-right { display: table-cell; vertical-align: middle; text-align: right; }
 
         .bandeau-label {
-            font-size: 7pt;
-            color: #64748b;
+            font-size: 6.5pt;
+            color: rgba(255,255,255,0.4);
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 1.2px;
+            margin-bottom: 2px;
         }
 
         .bandeau-periode-nom {
             font-size: 13pt;
             font-weight: bold;
             color: #ffffff;
+            letter-spacing: 0.3px;
         }
 
         .bandeau-niveau {
             display: inline-block;
-            padding: 4px 14px;
+            padding: 5px 16px;
             border-radius: 3px;
             font-size: 8pt;
             font-weight: bold;
             letter-spacing: 0.5px;
         }
 
-        .niveau-satisfaisant { background: #16a34a; color: #fff; }
-        .niveau-acceptable    { background: #ca8a04; color: #fff; }
-        .niveau-preoccupant   { background: #ea580c; color: #fff; }
-        .niveau-critique      { background: #dc2626; color: #fff; }
+        .niveau-satisfaisant { background: #15803d; color: #fff; }
+        .niveau-acceptable   { background: #ca8a04; color: #fff; }
+        .niveau-preoccupant  { background: #ea580c; color: #fff; }
+        .niveau-critique     { background: #c62828; color: #fff; }
 
         /* =====================================================================
-           CORPS PRINCIPAL
+           CORPS
         ===================================================================== */
-        .body-content {
-            padding: 20px 28px;
-        }
+        .body-content { padding: 22px 28px 40px; }
 
         /* =====================================================================
            SECTIONS
         ===================================================================== */
-        .section {
-            margin-bottom: 20px;
-        }
+        .section { margin-bottom: 20px; }
 
         .section-titre {
-            font-size: 9pt;
+            font-size: 8.5pt;
             font-weight: bold;
-            color: #0f3460;
+            color: #31287C;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
-            border-bottom: 2px solid #0f3460;
-            padding-bottom: 4px;
-            margin-bottom: 12px;
+            letter-spacing: 1.8px;
+            border-bottom: 2.5px solid #31287C;
+            padding-bottom: 5px;
+            margin-bottom: 13px;
             display: table;
             width: 100%;
         }
 
-        .section-titre-accent {
-            display: table-cell;
+        .section-titre::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            background: #F6A500;
+            border-radius: 50%;
+            margin-right: 7px;
+            vertical-align: middle;
         }
+
+        .section-titre-accent { display: table-cell; }
 
         .section-titre-numero {
             display: table-cell;
             text-align: right;
             font-size: 7pt;
-            color: #94a3b8;
+            color: #c4b8f5;
             font-weight: normal;
             letter-spacing: 0;
         }
 
         /* =====================================================================
-           CARTES KPI — CHIFFRES CLÉS
+           KPI CARDS
         ===================================================================== */
         .kpi-grid {
             display: table;
             width: 100%;
             border-collapse: separate;
-            border-spacing: 6px;
+            border-spacing: 7px;
         }
 
-        .kpi-row {
-            display: table-row;
-        }
-
-        .kpi-cell {
-            display: table-cell;
-            width: 25%;
-        }
+        .kpi-row  { display: table-row; }
+        .kpi-cell { display: table-cell; width: 25%; }
 
         .kpi-card {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-top: 3px solid #0f3460;
-            padding: 10px 12px;
-            border-radius: 2px;
+            background: #f4f3fb;
+            border: 1px solid #e8e6f5;
+            border-top: 4px solid #31287C;
+            padding: 11px 13px;
+            border-radius: 3px;
         }
 
-        .kpi-card.accent-or    { border-top-color: #e2b04a; }
-        .kpi-card.accent-vert  { border-top-color: #16a34a; }
-        .kpi-card.accent-rouge { border-top-color: #dc2626; }
-        .kpi-card.accent-bleu  { border-top-color: #0f3460; }
+        .kpi-card.accent-orange { border-top-color: #F6A500; }
+        .kpi-card.accent-vert   { border-top-color: #15803d; }
+        .kpi-card.accent-rouge  { border-top-color: #c62828; }
+        .kpi-card.accent-violet { border-top-color: #31287C; }
 
         .kpi-valeur {
-            font-size: 20pt;
+            font-size: 22pt;
             font-weight: bold;
-            color: #0f3460;
+            color: #31287C;
             line-height: 1;
-            margin-bottom: 2px;
+            margin-bottom: 3px;
         }
 
-        .kpi-valeur.couleur-vert  { color: #16a34a; }
-        .kpi-valeur.couleur-rouge { color: #dc2626; }
-        .kpi-valeur.couleur-or    { color: #e2b04a; }
+        .kpi-valeur.couleur-vert   { color: #15803d; }
+        .kpi-valeur.couleur-rouge  { color: #c62828; }
+        .kpi-valeur.couleur-orange { color: #F6A500; }
 
         .kpi-label {
-            font-size: 7pt;
+            font-size: 6.5pt;
             color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.8px;
         }
 
         .kpi-variation {
-            font-size: 7pt;
-            margin-top: 4px;
-            padding: 2px 6px;
+            font-size: 6.5pt;
+            margin-top: 5px;
+            padding: 2px 7px;
             border-radius: 2px;
             display: inline-block;
         }
 
-        .var-hausse { background: #fef2f2; color: #dc2626; }
-        .var-baisse { background: #f0fdf4; color: #16a34a; }
-        .var-stable { background: #f8fafc; color: #64748b; }
+        .var-hausse { background: #fce8e8; color: #c62828; }
+        .var-baisse { background: #e8f5e9; color: #15803d; }
+        .var-stable { background: #f0eeff; color: #31287C; }
 
         /* =====================================================================
-           CONSTAT GÉNÉRAL
+           CONSTAT BOX
         ===================================================================== */
         .constat-box {
-            background: #f0f6ff;
-            border-left: 4px solid #0f3460;
-            padding: 12px 16px;
-            border-radius: 0 3px 3px 0;
+            background: #f0eeff;
+            border-left: 5px solid #31287C;
+            padding: 13px 16px;
+            border-radius: 0 4px 4px 0;
         }
 
         .constat-text {
             font-size: 9pt;
-            color: #1e3a5f;
-            line-height: 1.7;
+            color: #1e1a3f;
+            line-height: 1.75;
             text-align: justify;
         }
 
         /* =====================================================================
-           TABLEAU PAR TYPE
+           TABLEAUX OFFICIELS
         ===================================================================== */
         .table-officielle {
             width: 100%;
@@ -327,50 +324,36 @@
         }
 
         .table-officielle thead tr {
-            background: #0f3460;
+            background: #31287C;
             color: #ffffff;
         }
 
         .table-officielle thead th {
-            padding: 7px 10px;
+            padding: 8px 10px;
             text-align: left;
             font-size: 7.5pt;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
             font-weight: bold;
         }
 
         .table-officielle thead th.right { text-align: right; }
 
-        .table-officielle tbody tr:nth-child(even) {
-            background: #f8fafc;
-        }
-
-        .table-officielle tbody tr:nth-child(odd) {
-            background: #ffffff;
-        }
+        .table-officielle tbody tr:nth-child(even) { background: #f4f3fb; }
+        .table-officielle tbody tr:nth-child(odd)  { background: #ffffff; }
 
         .table-officielle tbody td {
-            padding: 6px 10px;
-            border-bottom: 1px solid #e2e8f0;
+            padding: 7px 10px;
+            border-bottom: 1px solid #e8e6f5;
             color: #334155;
         }
 
-        .table-officielle tbody td.right {
-            text-align: right;
-            font-weight: bold;
-        }
+        .table-officielle tbody td.right  { text-align: right; font-weight: bold; }
+        .table-officielle tbody td.center { text-align: center; }
 
-        .table-officielle tbody td.center {
-            text-align: center;
-        }
-
-        .table-officielle tfoot tr {
-            background: #16213e;
-            color: #ffffff;
-        }
+        .table-officielle tfoot tr { background: #1e1a5c; color: #ffffff; }
 
         .table-officielle tfoot td {
-            padding: 6px 10px;
+            padding: 7px 10px;
             font-weight: bold;
             font-size: 8pt;
         }
@@ -378,10 +361,10 @@
         .table-officielle tfoot td.right { text-align: right; }
 
         /* =====================================================================
-           BARRE DE PROGRESSION
+           BARRE PROGRESSION
         ===================================================================== */
         .barre-container {
-            background: #e2e8f0;
+            background: #e8e6f5;
             border-radius: 2px;
             height: 8px;
             width: 100%;
@@ -389,36 +372,26 @@
             vertical-align: middle;
         }
 
-        .barre-fill {
-            height: 8px;
-            border-radius: 2px;
-            background: #0f3460;
-        }
-
-        .barre-fill.vert  { background: #16a34a; }
-        .barre-fill.rouge { background: #dc2626; }
-        .barre-fill.or    { background: #e2b04a; }
+        .barre-fill          { height: 8px; border-radius: 2px; background: #31287C; }
+        .barre-fill.vert     { background: #15803d; }
+        .barre-fill.rouge    { background: #c62828; }
+        .barre-fill.orange   { background: #F6A500; }
 
         /* =====================================================================
            ALERTES
         ===================================================================== */
-        .alertes-liste {
-            margin: 0;
-            padding: 0;
-        }
-
         .alerte-item {
             padding: 9px 12px;
-            margin-bottom: 6px;
+            margin-bottom: 7px;
             border-radius: 3px;
             border-left: 4px solid;
             display: table;
             width: 100%;
         }
 
-        .alerte-critique     { background: #fef2f2; border-color: #dc2626; }
-        .alerte-avertissement{ background: #fff7ed; border-color: #ea580c; }
-        .alerte-information  { background: #eff6ff; border-color: #3b82f6; }
+        .alerte-critique      { background: #fef2f2; border-color: #c62828; }
+        .alerte-avertissement { background: #fff7ed; border-color: #ea580c; }
+        .alerte-information   { background: #f0eeff; border-color: #31287C; }
 
         .alerte-icone {
             display: table-cell;
@@ -428,32 +401,18 @@
             padding-top: 1px;
         }
 
-        .alerte-body {
-            display: table-cell;
-            vertical-align: top;
-        }
-
-        .alerte-titre {
-            font-size: 8.5pt;
-            font-weight: bold;
-            color: #1e293b;
-            margin-bottom: 2px;
-        }
-
-        .alerte-message {
-            font-size: 8pt;
-            color: #475569;
-            line-height: 1.5;
-        }
+        .alerte-body    { display: table-cell; vertical-align: top; }
+        .alerte-titre   { font-size: 8.5pt; font-weight: bold; color: #1e293b; margin-bottom: 2px; }
+        .alerte-message { font-size: 8pt; color: #475569; line-height: 1.5; }
 
         /* =====================================================================
            POINTS POSITIFS
         ===================================================================== */
         .positif-item {
             padding: 7px 12px;
-            margin-bottom: 5px;
-            background: #f0fdf4;
-            border-left: 4px solid #16a34a;
+            margin-bottom: 6px;
+            background: #e8f5e9;
+            border-left: 4px solid #15803d;
             border-radius: 3px;
             display: table;
             width: 100%;
@@ -475,61 +434,50 @@
         }
 
         /* =====================================================================
-           ÉVOLUTION — GRAPHIQUE EN BARRES SVG-LIKE (CSS only)
+           GRAPHIQUE BARRES CSS
         ===================================================================== */
-        .evolution-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+        .evolution-table { width: 100%; border-collapse: collapse; }
 
         .evolution-table td {
             vertical-align: bottom;
             text-align: center;
             padding: 0 2px;
-            font-size: 6.5pt;
-            color: #64748b;
-        }
-
-        .barre-evolution {
-            width: 100%;
-            background: #e2e8f0;
-            border-radius: 2px 2px 0 0;
-            position: relative;
-            margin: 0 auto;
+            font-size: 6pt;
+            color: #94a3b8;
         }
 
         .barre-dec {
-            background: #0f3460;
+            background: #31287C;
             border-radius: 2px 2px 0 0;
             width: 100%;
         }
 
         .barre-pub {
-            background: #e2b04a;
+            background: #F6A500;
             border-radius: 2px 2px 0 0;
             width: 100%;
         }
 
         /* =====================================================================
-           ANALYSE TEXTUELLE
+           ANALYSE BLOC
         ===================================================================== */
         .analyse-bloc {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
+            background: #f4f3fb;
+            border: 1px solid #e8e6f5;
             border-radius: 3px;
             padding: 11px 14px;
-            margin-bottom: 8px;
+            margin-bottom: 9px;
         }
 
         .analyse-bloc-titre {
             font-size: 7.5pt;
             font-weight: bold;
-            color: #0f3460;
+            color: #31287C;
             text-transform: uppercase;
             letter-spacing: 0.8px;
             margin-bottom: 5px;
             padding-bottom: 4px;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e8e6f5;
         }
 
         .analyse-bloc-texte {
@@ -546,17 +494,17 @@
             display: table;
             width: 100%;
             margin-bottom: 8px;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #e8e6f5;
             border-radius: 3px;
             overflow: hidden;
         }
 
         .reco-numero {
             display: table-cell;
-            width: 28px;
-            background: #0f3460;
-            color: #e2b04a;
-            font-size: 11pt;
+            width: 30px;
+            background: #31287C;
+            color: #F6A500;
+            font-size: 12pt;
             font-weight: bold;
             text-align: center;
             vertical-align: middle;
@@ -565,15 +513,15 @@
 
         .reco-body {
             display: table-cell;
-            padding: 8px 12px;
+            padding: 9px 13px;
             vertical-align: top;
-            background: #f8fafc;
+            background: #f4f3fb;
         }
 
         .reco-titre {
             font-size: 8.5pt;
             font-weight: bold;
-            color: #0f3460;
+            color: #31287C;
             margin-bottom: 3px;
         }
 
@@ -584,22 +532,21 @@
             text-align: justify;
         }
 
-        .reco-acteurs {
-            margin-top: 5px;
-        }
+        .reco-acteurs { margin-top: 5px; }
 
         .reco-acteur-tag {
             display: inline-block;
-            background: #e0eaff;
-            color: #1e40af;
+            background: #f0eeff;
+            color: #31287C;
             font-size: 6.5pt;
-            padding: 2px 7px;
+            padding: 2px 8px;
             border-radius: 10px;
             margin-right: 4px;
+            border: 1px solid #d4cff5;
         }
 
         /* =====================================================================
-           PIED DE PAGE
+           PIED DE PAGE FIXE
         ===================================================================== */
         .footer {
             position: fixed;
@@ -610,54 +557,53 @@
 
         .footer-bande {
             height: 3px;
-            background: linear-gradient(90deg, #0f3460, #e2b04a 50%, #0f3460);
+            background: linear-gradient(90deg, #31287C, #F6A500 50%, #31287C);
         }
 
         .footer-content {
-            background: #16213e;
-            padding: 6px 28px;
+            background: #1e1a5c;
+            padding: 7px 28px;
             display: table;
             width: 100%;
         }
 
-        .footer-left {
-            display: table-cell;
-            vertical-align: middle;
-        }
-
-        .footer-right {
-            display: table-cell;
-            vertical-align: middle;
-            text-align: right;
-        }
+        .footer-left  { display: table-cell; vertical-align: middle; }
+        .footer-right { display: table-cell; vertical-align: middle; text-align: right; }
 
         .footer-text {
             font-size: 6.5pt;
-            color: #64748b;
+            color: rgba(255,255,255,0.35);
         }
 
-        .footer-confidentiel {
+        .footer-officiel {
             font-size: 6.5pt;
-            color: #e2b04a;
+            color: #F6A500;
             font-weight: bold;
-            letter-spacing: 1px;
+            letter-spacing: 1.2px;
             text-transform: uppercase;
         }
 
         /* =====================================================================
-           SÉPARATEURS & UTILITAIRES
+           BADGES
         ===================================================================== */
-        .sep {
-            border: none;
-            border-top: 1px solid #e2e8f0;
-            margin: 14px 0;
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 2px;
+            font-size: 6.5pt;
+            font-weight: bold;
         }
 
-        .sep-leger {
-            border: none;
-            border-top: 1px dashed #e2e8f0;
-            margin: 8px 0;
-        }
+        .badge-violet { background: #f0eeff; color: #31287C; }
+        .badge-orange { background: #fff3e0; color: #e65100; }
+        .badge-vert   { background: #e8f5e9; color: #15803d; }
+        .badge-rouge  { background: #fce8e8; color: #c62828; }
+
+        /* =====================================================================
+           UTILITAIRES
+        ===================================================================== */
+        .sep       { border: none; border-top: 1px solid #e8e6f5; margin: 15px 0; }
+        .sep-leger { border: none; border-top: 1px dashed #e8e6f5; margin: 9px 0; }
 
         .text-center { text-align: center; }
         .text-right  { text-align: right; }
@@ -666,24 +612,6 @@
         .mt-8        { margin-top: 8px; }
         .mt-4        { margin-top: 4px; }
 
-        .badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 2px;
-            font-size: 7pt;
-            font-weight: bold;
-        }
-
-        .badge-bleu  { background: #dbeafe; color: #1e40af; }
-        .badge-vert  { background: #dcfce7; color: #15803d; }
-        .badge-rouge { background: #fee2e2; color: #b91c1c; }
-        .badge-or    { background: #fef3c7; color: #92400e; }
-
-        /* Forcer les sauts de page */
-        .page-break { page-break-after: always; }
-        .no-break   { page-break-inside: avoid; }
-
-        /* Deux colonnes */
         .col-2 {
             display: table;
             width: 100%;
@@ -691,18 +619,17 @@
             border-collapse: separate;
         }
 
-        .col-2-cell {
-            display: table-cell;
-            width: 50%;
-            vertical-align: top;
-        }
+        .col-2-cell { display: table-cell; width: 50%; vertical-align: top; }
+
+        .page-break { page-break-after: always; }
+        .no-break   { page-break-inside: avoid; }
     </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     PIED DE PAGE FIXE (déclaré en premier pour dompdf)
-═══════════════════════════════════════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════════════════════════════════
+     PIED DE PAGE FIXE
+═══════════════════════════════════════════════════════════════════════ -->
 <div class="footer">
     <div class="footer-bande"></div>
     <div class="footer-content">
@@ -715,30 +642,32 @@
             </div>
         </div>
         <div class="footer-right">
-            <div class="footer-confidentiel">Document officiel</div>
-            <div class="footer-text">Usage institutionnel</div>
+            <div class="footer-officiel">Document officiel</div>
+            <div class="footer-text">Usage institutionnel restreint</div>
         </div>
     </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
+<!-- ═══════════════════════════════════════════════════════════════════════
      PAGE 1
-═══════════════════════════════════════════════════════════════════════════ -->
+═══════════════════════════════════════════════════════════════════════ -->
 <div class="page">
 
     <!-- EN-TÊTE -->
     <div class="header">
-        <div class="header-bande-or"></div>
+        <div class="header-bande-top"></div>
+        <div class="header-deco-cercle"></div>
+        <div class="header-deco-cercle-2"></div>
         <div class="header-content">
             <div class="header-left">
                 <div class="header-republique">Plateforme nationale de gestion documentaire</div>
                 <div class="header-pays">{{ $meta['pays'] }}</div>
-                <div class="header-plateforme">Doc<span>Track</span></div>
+                <div class="header-logo-text">Doc<span>Track</span></div>
                 <div class="header-slogan">Retrouver vos documents perdus, partout au Sénégal</div>
             </div>
             <div class="header-right">
                 <div class="header-badge-type">{{ $meta['type'] }}</div>
-                <div class="header-numero">Réf. {{ $meta['numero_rapport'] }}</div>
+                <div class="header-ref">Réf. {{ $meta['numero_rapport'] }}</div>
                 <div class="header-date">Généré le {{ $meta['genere_le'] }}</div>
             </div>
         </div>
@@ -758,12 +687,10 @@
         </div>
     </div>
 
-    <!-- CORPS -->
+    <!-- CORPS PAGE 1 -->
     <div class="body-content">
 
-        <!-- ══════════════════════════════════════════════════════════════════
-             SECTION 1 — CHIFFRES CLÉS
-        ═══════════════════════════════════════════════════════════════════ -->
+        <!-- ══ SECTION 1 — CHIFFRES CLÉS ══ -->
         <div class="section">
             <div class="section-titre">
                 <span class="section-titre-accent">1. Chiffres clés de la période</span>
@@ -772,37 +699,33 @@
 
             <div class="kpi-grid">
                 <div class="kpi-row">
-                    <!-- KPI 1 : Déclarations -->
+
                     <div class="kpi-cell">
-                        <div class="kpi-card accent-bleu">
+                        <div class="kpi-card accent-violet">
                             <div class="kpi-valeur">{{ number_format($stats['declarations']['total'], 0, ',', ' ') }}</div>
                             <div class="kpi-label">Déclarations de perte</div>
                             @php $varD = $stats['comparaison']['declarations_variation']; @endphp
                             @if($varD['sens'] !== 'neutre')
-                                <div class="kpi-variation var-{{ $varD['sens'] }}">
-                                    {{ $varD['sens'] === 'hausse' ? '↑' : ($varD['sens'] === 'baisse' ? '↓' : '→') }}
-                                    {{ $varD['valeur'] }}% vs période préc.
-                                </div>
+                            <div class="kpi-variation var-{{ $varD['sens'] }}">
+                                {{ $varD['sens'] === 'hausse' ? '↑' : '↓' }} {{ $varD['valeur'] }}% vs période préc.
+                            </div>
                             @endif
                         </div>
                     </div>
 
-                    <!-- KPI 2 : Publications -->
                     <div class="kpi-cell">
-                        <div class="kpi-card accent-or">
-                            <div class="kpi-valeur couleur-or">{{ number_format($stats['publications']['total'], 0, ',', ' ') }}</div>
+                        <div class="kpi-card accent-orange">
+                            <div class="kpi-valeur couleur-orange">{{ number_format($stats['publications']['total'], 0, ',', ' ') }}</div>
                             <div class="kpi-label">Documents publiés</div>
                             @php $varP = $stats['comparaison']['publications_variation']; @endphp
                             @if($varP['sens'] !== 'neutre')
-                                <div class="kpi-variation var-{{ $varP['sens'] }}">
-                                    {{ $varP['sens'] === 'hausse' ? '↑' : ($varP['sens'] === 'baisse' ? '↓' : '→') }}
-                                    {{ $varP['valeur'] }}% vs période préc.
-                                </div>
+                            <div class="kpi-variation var-{{ $varP['sens'] }}">
+                                {{ $varP['sens'] === 'hausse' ? '↑' : '↓' }} {{ $varP['valeur'] }}% vs période préc.
+                            </div>
                             @endif
                         </div>
                     </div>
 
-                    <!-- KPI 3 : Taux de restitution -->
                     <div class="kpi-cell">
                         <div class="kpi-card accent-vert">
                             <div class="kpi-valeur {{ $stats['publications']['taux_restitution'] >= 50 ? 'couleur-vert' : ($stats['publications']['taux_restitution'] < 25 ? 'couleur-rouge' : '') }}">
@@ -815,7 +738,6 @@
                         </div>
                     </div>
 
-                    <!-- KPI 4 : Localités couvertes -->
                     <div class="kpi-cell">
                         <div class="kpi-card accent-rouge">
                             <div class="kpi-valeur">{{ $stats['par_region']['nombre_localites'] }}</div>
@@ -825,13 +747,12 @@
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
 
-        <!-- ══════════════════════════════════════════════════════════════════
-             SECTION 2 — CONSTAT GÉNÉRAL
-        ═══════════════════════════════════════════════════════════════════ -->
+        <!-- ══ SECTION 2 — CONSTAT GÉNÉRAL ══ -->
         <div class="section">
             <div class="section-titre">
                 <span class="section-titre-accent">2. Constat général</span>
@@ -842,9 +763,7 @@
             </div>
         </div>
 
-        <!-- ══════════════════════════════════════════════════════════════════
-             SECTION 3 — STATISTIQUES DÉTAILLÉES PAR TYPE
-        ═══════════════════════════════════════════════════════════════════ -->
+        <!-- ══ SECTION 3 — RÉPARTITION PAR TYPE ══ -->
         <div class="section no-break">
             <div class="section-titre">
                 <span class="section-titre-accent">3. Répartition par type de document</span>
@@ -852,7 +771,6 @@
             </div>
 
             <div class="col-2">
-                <!-- Déclarations par type -->
                 <div class="col-2-cell">
                     <p class="text-muted bold" style="margin-bottom:6px;">Déclarations de perte</p>
                     <table class="table-officielle">
@@ -883,7 +801,6 @@
                     </table>
                 </div>
 
-                <!-- Publications par type -->
                 <div class="col-2-cell">
                     <p class="text-muted bold" style="margin-bottom:6px;">Documents trouvés publiés</p>
                     <table class="table-officielle">
@@ -916,22 +833,18 @@
             </div>
         </div>
 
-        <!-- ══════════════════════════════════════════════════════════════════
-             SECTION 4 — ANALYSE GÉOGRAPHIQUE
-        ═══════════════════════════════════════════════════════════════════ -->
+        <!-- ══ SECTION 4 — ANALYSE GÉOGRAPHIQUE ══ -->
         <div class="section no-break">
             <div class="section-titre">
                 <span class="section-titre-accent">4. Analyse géographique</span>
                 <span class="section-titre-numero">§4</span>
             </div>
 
-            <!-- Texte d'analyse -->
             <div class="analyse-bloc" style="margin-bottom:10px;">
                 <div class="analyse-bloc-titre">Synthèse territoriale</div>
                 <div class="analyse-bloc-texte">{{ $analyse['analyse_geographique'] }}</div>
             </div>
 
-            <!-- Tableau des régions -->
             @if($stats['par_region']['liste']->count() > 0)
             <table class="table-officielle">
                 <thead>
@@ -948,7 +861,7 @@
                     @foreach($stats['par_region']['liste'] as $region)
                     @php
                         $taux = $region['taux_restitution'];
-                        $barreClass = $taux >= 50 ? 'vert' : ($taux < 25 ? 'rouge' : 'or');
+                        $barreClass = $taux >= 50 ? 'vert' : ($taux < 25 ? 'rouge' : 'orange');
                         $largeur = min($taux, 100);
                     @endphp
                     <tr>
@@ -962,7 +875,7 @@
                         <td class="right">{{ $region['recuperes'] }}</td>
                         <td class="right">{{ $region['non_recuperes'] }}</td>
                         <td class="right">
-                            <span class="badge {{ $taux >= 50 ? 'badge-vert' : ($taux < 25 ? 'badge-rouge' : 'badge-or') }}">
+                            <span class="badge {{ $taux >= 50 ? 'badge-vert' : ($taux < 25 ? 'badge-rouge' : 'badge-orange') }}">
                                 {{ $taux }}%
                             </span>
                         </td>
@@ -981,16 +894,14 @@
     </div><!-- /body-content page 1 -->
 </div><!-- /page 1 -->
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
+<!-- ═══════════════════════════════════════════════════════════════════════
      PAGE 2
-═══════════════════════════════════════════════════════════════════════════ -->
+═══════════════════════════════════════════════════════════════════════ -->
 <div class="page-break"></div>
 <div class="page">
     <div class="body-content">
 
-        <!-- ══════════════════════════════════════════════════════════════════
-             SECTION 5 — ÉVOLUTION TEMPORELLE
-        ═══════════════════════════════════════════════════════════════════ -->
+        <!-- ══ SECTION 5 — ÉVOLUTION ══ -->
         <div class="section no-break">
             <div class="section-titre">
                 <span class="section-titre-accent">
@@ -999,18 +910,16 @@
                 <span class="section-titre-numero">§5</span>
             </div>
 
-            <!-- Analyse temporelle -->
             <div class="analyse-bloc" style="margin-bottom:10px;">
                 <div class="analyse-bloc-titre">Tendance observée</div>
                 <div class="analyse-bloc-texte">{{ $analyse['analyse_temporelle'] }}</div>
             </div>
 
-            <!-- Graphique en barres CSS -->
             @php
                 $evolutionData = $stats['evolution']['donnees'];
                 $maxVal = collect($evolutionData)->max(fn($d) => max($d['declarations'], $d['publications']));
                 $maxVal = max($maxVal, 1);
-                $hauteurMax = 50; // px max pour les barres
+                $hauteurMax = 50;
             @endphp
 
             <table class="evolution-table">
@@ -1021,7 +930,6 @@
                         $hPub = round(($point['publications'] / $maxVal) * $hauteurMax);
                     @endphp
                     <td style="width:{{ round(100 / count($evolutionData), 2) }}%;">
-                        <!-- Barre déclarations -->
                         <div style="height:{{ $hauteurMax }}px; position:relative; display:flex; align-items:flex-end; justify-content:center; gap:1px;">
                             <div class="barre-dec" style="height:{{ $hDec }}px; width:45%;"></div>
                             <div class="barre-pub" style="height:{{ $hPub }}px; width:45%;"></div>
@@ -1036,14 +944,13 @@
 
             <!-- Légende -->
             <div class="mt-4" style="text-align:center;">
-                <span style="display:inline-block; width:10px; height:10px; background:#0f3460; border-radius:1px; margin-right:4px; vertical-align:middle;"></span>
+                <span style="display:inline-block; width:10px; height:10px; background:#31287C; border-radius:1px; margin-right:4px; vertical-align:middle;"></span>
                 <span class="text-muted">Déclarations</span>
                 &nbsp;&nbsp;
-                <span style="display:inline-block; width:10px; height:10px; background:#e2b04a; border-radius:1px; margin-right:4px; vertical-align:middle;"></span>
+                <span style="display:inline-block; width:10px; height:10px; background:#F6A500; border-radius:1px; margin-right:4px; vertical-align:middle;"></span>
                 <span class="text-muted">Publications</span>
             </div>
 
-            <!-- Tableau récapitulatif évolution -->
             <div class="mt-8">
                 <table class="table-officielle">
                     <thead>
@@ -1070,9 +977,7 @@
 
         <hr class="sep">
 
-        <!-- ══════════════════════════════════════════════════════════════════
-             SECTION 6 — ALERTES & POINTS POSITIFS
-        ═══════════════════════════════════════════════════════════════════ -->
+        <!-- ══ SECTION 6 — ALERTES ══ -->
         <div class="section no-break">
             <div class="section-titre">
                 <span class="section-titre-accent">6. Alertes et points d'attention</span>
@@ -1080,7 +985,6 @@
             </div>
 
             <div class="col-2">
-                <!-- Alertes -->
                 <div class="col-2-cell">
                     <p class="text-muted bold" style="margin-bottom:6px;">Points d'attention</p>
                     @forelse($analyse['alertes'] as $alerte)
@@ -1093,12 +997,11 @@
                     </div>
                     @empty
                     <div class="analyse-bloc">
-                        <div class="analyse-bloc-texte text-center">✅ Aucune alerte pour cette période.</div>
+                        <div class="analyse-bloc-texte text-center">Aucune alerte pour cette période.</div>
                     </div>
                     @endforelse
                 </div>
 
-                <!-- Points positifs -->
                 <div class="col-2-cell">
                     <p class="text-muted bold" style="margin-bottom:6px;">Points positifs</p>
                     @forelse($analyse['points_positifs'] as $positif)
@@ -1117,9 +1020,7 @@
 
         <hr class="sep">
 
-        <!-- ══════════════════════════════════════════════════════════════════
-             SECTION 7 — RECOMMANDATIONS
-        ═══════════════════════════════════════════════════════════════════ -->
+        <!-- ══ SECTION 7 — RECOMMANDATIONS ══ -->
         <div class="section">
             <div class="section-titre">
                 <span class="section-titre-accent">7. Recommandations</span>
@@ -1146,9 +1047,7 @@
 
         <hr class="sep">
 
-        <!-- ══════════════════════════════════════════════════════════════════
-             SECTION 8 — DONNÉES COMPLÉMENTAIRES
-        ═══════════════════════════════════════════════════════════════════ -->
+        <!-- ══ SECTION 8 — DONNÉES COMPLÉMENTAIRES ══ -->
         <div class="section no-break">
             <div class="section-titre">
                 <span class="section-titre-accent">8. Données complémentaires</span>
@@ -1156,55 +1055,41 @@
             </div>
 
             <div class="col-2">
-                <!-- Restitutions -->
                 <div class="col-2-cell">
                     <div class="analyse-bloc">
                         <div class="analyse-bloc-titre">Restitutions</div>
                         <table style="width:100%; font-size:8.5pt;">
                             <tr>
                                 <td style="padding:4px 0; color:#475569;">Demandes de restitution</td>
-                                <td style="text-align:right; font-weight:bold; color:#0f3460;">
-                                    {{ $stats['restitutions']['demandes_restitution'] }}
-                                </td>
+                                <td style="text-align:right; font-weight:bold; color:#31287C;">{{ $stats['restitutions']['demandes_restitution'] }}</td>
                             </tr>
                             <tr>
                                 <td style="padding:4px 0; color:#475569;">Documents effectivement récupérés</td>
-                                <td style="text-align:right; font-weight:bold; color:#16a34a;">
-                                    {{ $stats['restitutions']['documents_recuperes'] }}
-                                </td>
+                                <td style="text-align:right; font-weight:bold; color:#15803d;">{{ $stats['restitutions']['documents_recuperes'] }}</td>
                             </tr>
                             <tr>
                                 <td style="padding:4px 0; color:#475569;">Documents non récupérés</td>
-                                <td style="text-align:right; font-weight:bold; color:#dc2626;">
-                                    {{ $stats['publications']['non_recuperes'] }}
-                                </td>
+                                <td style="text-align:right; font-weight:bold; color:#c62828;">{{ $stats['publications']['non_recuperes'] }}</td>
                             </tr>
                         </table>
                     </div>
                 </div>
 
-                <!-- Utilisateurs -->
                 <div class="col-2-cell">
                     <div class="analyse-bloc">
                         <div class="analyse-bloc-titre">Utilisateurs</div>
                         <table style="width:100%; font-size:8.5pt;">
                             <tr>
                                 <td style="padding:4px 0; color:#475569;">Nouveaux inscrits sur la période</td>
-                                <td style="text-align:right; font-weight:bold; color:#0f3460;">
-                                    {{ $stats['utilisateurs']['nouveaux_inscrits'] }}
-                                </td>
+                                <td style="text-align:right; font-weight:bold; color:#31287C;">{{ $stats['utilisateurs']['nouveaux_inscrits'] }}</td>
                             </tr>
                             <tr>
                                 <td style="padding:4px 0; color:#475569;">Utilisateurs actifs</td>
-                                <td style="text-align:right; font-weight:bold; color:#16a34a;">
-                                    {{ $stats['utilisateurs']['actifs'] }}
-                                </td>
+                                <td style="text-align:right; font-weight:bold; color:#15803d;">{{ $stats['utilisateurs']['actifs'] }}</td>
                             </tr>
                             <tr>
                                 <td style="padding:4px 0; color:#475569;">Déclarations supprimées (soft)</td>
-                                <td style="text-align:right; font-weight:bold; color:#64748b;">
-                                    {{ $stats['declarations']['supprimees'] }}
-                                </td>
+                                <td style="text-align:right; font-weight:bold; color:#64748b;">{{ $stats['declarations']['supprimees'] }}</td>
                             </tr>
                         </table>
                     </div>
@@ -1212,14 +1097,13 @@
             </div>
         </div>
 
-        <!-- ══════════════════════════════════════════════════════════════════
-             CONCLUSION
-        ═══════════════════════════════════════════════════════════════════ -->
+        <!-- ══ CONCLUSION ══ -->
         <div class="section no-break">
             <div class="section-titre">
                 <span class="section-titre-accent">Conclusion</span>
             </div>
-            <div class="constat-box" style="background:#f0f9ff; border-color:#e2b04a;">
+
+            <div class="constat-box" style="background:#fff8ec; border-color:#F6A500;">
                 <div class="constat-text">
                     Ce rapport institutionnel {{ strtolower($meta['type']) }} DocTrack couvre la période
                     <strong>{{ $stats['periode'] }}</strong> et synthétise l'ensemble des activités
@@ -1238,14 +1122,14 @@
             <!-- Bloc signature -->
             <div style="margin-top:24px; display:table; width:100%;">
                 <div style="display:table-cell; width:50%; vertical-align:top; padding-right:20px;">
-                    <div style="border-top:1px solid #cbd5e1; padding-top:6px;">
-                        <div class="text-muted">Généré par le système DocTrack</div>
+                    <div style="border-top:2px solid #F6A500; padding-top:7px;">
+                        <div class="text-muted bold" style="color:#31287C; font-size:7.5pt;">Généré par le système DocTrack</div>
                         <div class="text-muted">{{ $meta['genere_le'] }}</div>
                     </div>
                 </div>
                 <div style="display:table-cell; width:50%; vertical-align:top; text-align:right; padding-left:20px;">
-                    <div style="border-top:1px solid #cbd5e1; padding-top:6px;">
-                        <div class="text-muted">Visa autorité compétente</div>
+                    <div style="border-top:2px solid #e8e6f5; padding-top:7px;">
+                        <div class="text-muted bold" style="color:#31287C; font-size:7.5pt;">Visa autorité compétente</div>
                         <div class="text-muted">&nbsp;</div>
                     </div>
                 </div>

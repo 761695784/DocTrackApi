@@ -102,33 +102,29 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/backup/status',   [BackupController::class, 'backupStatus']);
     Route::post('/backup/clean',   [BackupController::class, 'cleanBackups']);
     Route::get('/backup/download', [BackupController::class, 'downloadBackup']);
-});
 
-// Routes pour les types de documents (protégées)
-Route::apiResource('document-types', DocumentTypeController::class)->middleware('auth:api');
-
-// ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
 // ROUTES RAPPORT INSTITUTIONNEL — à ajouter dans routes/api.php
 // dans le groupe Route::middleware('auth:api')->group(function () { ... })
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Importer en haut du fichier api.php :
-Route::prefix('rapports')->group(function () {
-
     // Lister tous les rapports générés
-    Route::get('/',                         [RapportController::class, 'index']);
-
+    Route::get('/rapports',                         [RapportController::class, 'index']);
     // Données JSON pour le dashboard Angular (sans générer de PDF)
-    Route::get('/stats',                    [RapportController::class, 'stats']);
-
+    Route::get('/rapports/stats',                    [RapportController::class, 'stats']);
     // Générer un nouveau rapport + PDF et le sauvegarder
-    Route::post('/generer',                 [RapportController::class, 'generer']);
-
+    Route::post('/rapports/generer',                 [RapportController::class, 'generer']);
     // Aperçu PDF live (sans sauvegarder en base)
-    Route::get('/apercu',                   [RapportController::class, 'apercu']);
-
+    Route::get('/rapports/apercu',                   [RapportController::class, 'apercu']);
     // Actions sur un rapport existant (par UUID)
-    Route::get('/{uuid}/voir',              [RapportController::class, 'voir']);
-    Route::get('/{uuid}/telecharger',       [RapportController::class, 'telecharger']);
+    Route::get('/rapports/{uuid}/voir',              [RapportController::class, 'voir']);
+    Route::get('/rapports/{uuid}/telecharger',       [RapportController::class, 'telecharger']);
     Route::delete('/{uuid}',                [RapportController::class, 'destroy']);
 });
+
+
+// Routes pour les types de documents (protégées)
+Route::apiResource('document-types', DocumentTypeController::class)->middleware('auth:api');
+
+
