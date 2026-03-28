@@ -5,47 +5,44 @@ use App\Http\Requests\StoreDeclarationDePerteRequest;
 use App\Mail\DocumentPublishedNotification;
 use App\Models\DeclarationDePerte;
 use App\Models\Document;
-use App\Models\Notification;
 use App\Services\CertificatDePerteService;
 use App\Services\SmsService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Spatie\Permission\Traits\HasRoles;
-
 
 class DeclarationDePerteController extends Controller
 {
     use HasRoles;
 
-    /**
-     * Creer une nouvelle declaration de perte
-     */
+    // ══════════════════════════════════════════════════════════════
+    // STORE — Créer une déclaration
+    // ══════════════════════════════════════════════════════════════
     public function store(StoreDeclarationDePerteRequest $request, CertificatDePerteService $certificatService, SmsService $smsService)
     {
         // Vérifier si l'utilisateur est authentifié
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous devez être authentifié pour effectuer cette action.'
+                'message' => 'Vous devez être authentifié pour effectuer cette action.',
             ], 401);
         }
         // Effectuer les validations
         $validatedData = $request->validated();
-        $declaration = DeclarationDePerte::create([
-            'Title' => $validatedData['Title'],
-            'FirstNameInDoc' => $validatedData['FirstNameInDoc'],
-            'LastNameInDoc' => $validatedData['LastNameInDoc'],
+        $declaration   = DeclarationDePerte::create([
+            'Title'             => $validatedData['Title'],
+            'FirstNameInDoc'    => $validatedData['FirstNameInDoc'],
+            'LastNameInDoc'     => $validatedData['LastNameInDoc'],
             'DocIdentification' => $validatedData['DocIdentification'] ?? null,
-            'document_type_id' => $validatedData['document_type_id'],
-            'user_id' => $user->id,
+            'document_type_id'  => $validatedData['document_type_id'],
+            'user_id'           => $user->id,
         ]);
 
         // ── Log d'activité ──
-         /** @var \App\Models\User $user */
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         activity()
             ->causedBy($user)
@@ -61,7 +58,8 @@ class DeclarationDePerteController extends Controller
         // Générer automatiquement le certificat
         $certificat = $certificatService->genererCertificat($declaration);
 
-
+        // Invalide le cache des stats
+        Cache::forget('statistics_month_' . now()->format('Y_m'));
         // Création d'une notification
         // Notification::create([
         //     'message' => 'Nouvelle déclaration de perte créée : ' . $declaration->Title . ' ' . $declaration->FirstNameInDoc . ' ' . $declaration->LastNameInDoc,
@@ -71,6 +69,7 @@ class DeclarationDePerteController extends Controller
         $matchingDocuments = Document::where('document_type_id', $validatedData['document_type_id'])
             ->whereRaw('LOWER(OwnerFirstName) = LOWER(?)', [$validatedData['FirstNameInDoc']])
             ->whereRaw('LOWER(OwnerLastName) = LOWER(?)', [$validatedData['LastNameInDoc']])
+            ->with('user')
             ->get();
 
         foreach ($matchingDocuments as $document) {
@@ -81,12 +80,11 @@ class DeclarationDePerteController extends Controller
                 // Envoi SMS via le service SmsService
                 $phoneNumber = $user->Phone;
                 $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->uuid;
-                $message = 'Un document correspondant à votre déclaration de perte a été trouvé : ' .
-                           $document->OwnerFirstName . ' ' . $document->OwnerLastName .
-                           '. Consultez-le ici : ' . $documentUrl;
+                $message     = 'Un document correspondant à votre déclaration de perte a été trouvé : ' .
+                $document->OwnerFirstName . ' ' . $document->OwnerLastName .
+                    '. Consultez-le ici : ' . $documentUrl;
 
                 $smsService->sendSMS($phoneNumber, $message);
-
             } catch (\Exception $e) {
                 Log::error('Erreur lors de l\'envoi de la notification ou du SMS : ' . $e->getMessage());
             }
@@ -94,12 +92,12 @@ class DeclarationDePerteController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Déclaration de perte créée avec succès.',
-            'data' => [
-                    'declaration' => $declaration,
-                    'certificat' => $certificat,
-                    // 'pdf_url' => asset('storage/' . $certificat->pdf_path)
-                    'pdf_url' => url('/api/certificats/'.$certificat->uuid.'/voir') // Lien pour voir le PDF via l'API
-        ]
+            'data'    => [
+                'declaration' => $declaration,
+                'certificat'  => $certificat,
+                                                                                         // 'pdf_url' => asset('storage/' . $certificat->pdf_path)
+                'pdf_url'     => url('/api/certificats/' . $certificat->uuid . '/voir'), // Lien pour voir le PDF via l'API
+            ],
         ], 201);
     }
 
@@ -116,31 +114,30 @@ class DeclarationDePerteController extends Controller
 
             // Enregistrer un log d'email dans la table email_logs
             \App\Models\EmailLog::create([
-                'from' => config('mail.from.address'),
-                'to' => $user->email,
-                'subject' => 'Correspondance à votre déclaration de perte',
-                'body' => 'Le document publié correspond aux informations : ' .
-                          $document->OwnerFirstName . ' ' . $document->OwnerLastName .
-                          ' avec le numéro du publicateur : ' . $Phone,
+                'from'              => config('mail.from.address'),
+                'to'                => $user->email,
+                'subject'           => 'Correspondance à votre déclaration de perte',
+                'body'              => 'Le document publié correspond aux informations : ' .
+                $document->OwnerFirstName . ' ' . $document->OwnerLastName .
+                ' avec le numéro du publicateur : ' . $Phone,
                 'publisher_user_id' => $document->user->id,
                 'requester_user_id' => $user->id,
-                'document_id' => $document->uuid,
+                'document_id'       => $document->uuid,
                 'declarant_user_id' => $user->id,
             ]);
 
             Log::info('Email log enregistré avec succès pour l\'utilisateur ' . $user->email);
-
         } catch (\Exception $e) {
             Log::error('Erreur lors de l\'envoi ou de l\'enregistrement de l\'email log : ' . $e->getMessage(), [
                 'publisher_user_id' => $document->user->id,
                 'requester_user_id' => $user->id,
-                'document_id' => $document->uuid,
+                'document_id'       => $document->uuid,
                 'declarant_user_id' => $user->id,
             ]);
         }
     }
 
-    // Méthode pour envoyer un SMS via l'API Orange
+    // // Méthode pour envoyer un SMS via l'API Orange
     // protected function sendSMS($phoneNumber, $message)
     // {
     //     // Log du numéro de téléphone avant nettoyage
@@ -231,7 +228,7 @@ class DeclarationDePerteController extends Controller
     //     }
     // }
 
-    // Méthode pour obtenir un jeton d'accès
+    // // Méthode pour obtenir un jeton d'accès
     // protected function getAccessToken($clientId, $clientSecret)
     // {
     //     $url = 'https://api.orange.com/oauth/v3/token';
@@ -280,32 +277,38 @@ class DeclarationDePerteController extends Controller
     //     throw new \Exception('Impossible d\'obtenir le jeton d\'accès');
     // }
 
-     /**
-     * Afficher toutes les déclarations de perte (uniquement pour les admins).
-     */
+    // ══════════════════════════════════════════════════════════════
+    // INDEX — Liste des déclarations
+    // ══════════════════════════════════════════════════════════════
     public function index()
     {
         $user = Auth::user();
 
         // Si l'utilisateur n'est pas authentifié, retourner une erreur
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous devez être authentifié pour effectuer cette action.'
+                'message' => 'Vous devez être authentifié pour effectuer cette action.',
             ], 401); // Code 401 Unauthorized
         }
 
         // Si l'utilisateur est un administrateur, récupérer toutes les déclarations (y compris celles supprimées)
         if ($user->hasRole('Admin')) {
-            $declarations = DeclarationDePerte::withTrashed()->with(['user', 'documentType'])->get();
+            $declarations = DeclarationDePerte::withTrashed()
+                ->with(['user', 'documentType'])
+                ->latest()
+                ->paginate(20);
         } else {
             // Si l'utilisateur est un simple utilisateur, ne récupérer que ses propres déclarations (non supprimées)
-            $declarations = DeclarationDePerte::with(['user', 'documentType'])->where('user_id', $user->id)->get();
+            $declarations = DeclarationDePerte::with(['user', 'documentType'])
+                ->where('user_id', $user->id)
+                ->latest()
+                ->paginate(20);
         }
 
         return response()->json([
             'success' => true,
-            'data' => $declarations
+            'data'    => $declarations->items(), // ← plus de double imbrication data.data
         ]);
     }
 
@@ -315,10 +318,10 @@ class DeclarationDePerteController extends Controller
         // verifier si le user est connecte
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous devez être authentifié pour effectuer cette action.'
+                'message' => 'Vous devez être authentifié pour effectuer cette action.',
             ], 401); // Code 401 Unauthorized
         }
 
@@ -328,18 +331,17 @@ class DeclarationDePerteController extends Controller
             ->with('user')
             ->get();
 
-
         if ($declarations->isEmpty()) {
             return response()->json([
                 'success' => true,
                 'message' => 'Aucune déclaration supprimée trouvée.',
-                'data' => []
+                'data'    => [],
             ]);
         }
 
         return response()->json([
             'success' => true,
-            'data' => $declarations
+            'data'    => $declarations,
         ]);
     }
 
@@ -349,10 +351,10 @@ class DeclarationDePerteController extends Controller
         // Vérifier si l'utilisateur est connecté
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous devez être authentifié pour effectuer cette action.'
+                'message' => 'Vous devez être authentifié pour effectuer cette action.',
             ], 401);
         }
 
@@ -363,7 +365,7 @@ class DeclarationDePerteController extends Controller
             $declaration->restore();
             return response()->json([
                 'success' => true,
-                'message' => 'Déclaration restaurée avec succès.'
+                'message' => 'Déclaration restaurée avec succès.',
             ]);
         }
 
@@ -378,7 +380,7 @@ class DeclarationDePerteController extends Controller
 
         return response()->json([
             'success' => false,
-            'message' => 'Accès refusé. Vous ne pouvez restaurer que vos propres déclarations.'
+            'message' => 'Accès refusé. Vous ne pouvez restaurer que vos propres déclarations.',
         ], 403);
     }
 
@@ -388,35 +390,37 @@ class DeclarationDePerteController extends Controller
         // Vérifier si l'utilisateur est authentifié
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous devez être authentifié pour voir vos déclarations.'
+                'message' => 'Vous devez être authentifié pour voir vos déclarations.',
             ], 401);
         }
 
         // Récupérer les déclarations faites par l'utilisateur connecté avec les informations de l'utilisateur et du type de document
         $declarations = DeclarationDePerte::where('user_id', $user->id)
-            ->with(['user', 'documentType','certificat' ]) // Charger les relations user et documentType
+            ->with(['user', 'documentType', 'certificat']) // Charger les relations user et documentType
             ->get();
-            // dd($declarations->first()->certificat);
+        // dd($declarations->first()->certificat);
 
         return response()->json([
             'success' => true,
-            'data' => $declarations
+            'data'    => $declarations,
         ]);
     }
 
-    // Méthode pour voir une déclaration specifique
+    // ══════════════════════════════════════════════════════════════
+    // SHOW — Déclaration spécifique
+    // ══════════════════════════════════════════════════════════════
     public function show($uuid)
     {
         // Vérifier si l'utilisateur est authentifié
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous devez être authentifié pour effectuer cette action.'
+                'message' => 'Vous devez être authentifié pour effectuer cette action.',
             ], 401);
         }
 
@@ -427,25 +431,27 @@ class DeclarationDePerteController extends Controller
         if ($user->hasRole('Admin') || $declaration->user_id === $user->id) {
             return response()->json([
                 'success' => true,
-                'data' => $declaration
+                'data'    => $declaration,
             ]);
         }
 
         return response()->json([
             'success' => false,
-            'message' => 'Accès refusé. Vous ne pouvez voir que vos propres déclarations.'
+            'message' => 'Accès refusé. Vous ne pouvez voir que vos propres déclarations.',
         ], 403);
     }
 
-    // Fonction pour supprimer une declaration par le owner ou l'administrateur
+    // ══════════════════════════════════════════════════════════════
+    // DESTROY — Supprimer une déclaration
+    // ══════════════════════════════════════════════════════════════
     public function destroy($uuid)
     {
         // Vérifier si l'utilisateur est authentifié
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous devez être authentifié pour effectuer cette action.'
+                'message' => 'Vous devez être authentifié pour effectuer cette action.',
             ], 401);
         }
         // Récupérer la declaration par son uuid
@@ -453,29 +459,32 @@ class DeclarationDePerteController extends Controller
 
         // Vérifier si l'utilisateur est le propriétaire de la déclaration ou si c'est un administrateur
         if ($user->hasRole('Admin') || $declaration->user_id === $user->id) {
+
+            // ── Log d'activité ──
+            /** @var \App\Models\User $user */
+            activity()
+                ->causedBy($user)
+                ->performedOn($declaration)
+                ->withProperties([
+                    'uuid'       => $declaration->uuid,
+                    'deleted_by' => $user->id,
+                ])
+                ->log('Déclaration supprimée');
+
             $declaration->delete();
+
+            Cache::forget('statistics_month_' . now()->format('Y_m'));
+
             return response()->json([
                 'success' => true,
-                'message' => 'Déclaration de perte supprimée avec succès.'
+                'message' => 'Déclaration de perte supprimée avec succès.',
             ]);
         }
 
-        // ── Log d'activité ──
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-        activity()
-            ->causedBy($user)
-            ->performedOn($declaration)
-            ->withProperties([
-                'uuid'        => $declaration->uuid,
-                'deleted_by'  => $user->id,
-            ])
-            ->log('Déclaration supprimée');
         // retourner la reponse  de l'api
         return response()->json([
             'success' => false,
-            'message' => 'Accès refusé. Vous ne pouvez supprimer que vos propres déclarations.'
+            'message' => 'Accès refusé. Vous ne pouvez supprimer que vos propres déclarations.',
         ], 403);
     }
-
 }

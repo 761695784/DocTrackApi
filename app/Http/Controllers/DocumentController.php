@@ -1,250 +1,142 @@
 <?php
-
 namespace App\Http\Controllers;
 
-use App\Events\NewNotificationEvent;
 use App\Http\Requests\StoreDocumentRequest;
 use App\Http\Requests\UpdateDocumentRequest;
 use App\Http\Resources\DocumentResource;
-use App\Mail\DocumentPublishedNotification;
+use App\Jobs\NotifyDeclarantJob;
 use App\Models\DeclarationDePerte;
 use App\Models\Document;
 use App\Models\EmailLog;
-use App\Models\Notification;
+use App\Models\User;
 use App\Notifications\RestitutionRequestNotification;
 use App\Services\EmailNotificationService;
-use GuzzleHttp\Client;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
-use App\Services\SmsService;
+use Illuminate\Support\Str;
 
 class DocumentController extends Controller
 {
-    /**
-     * Afficher tous les documents
-     */
-    public function index()
+
+    // ══════════════════════════════════════════════════════════════
+    // INDEX — Liste publique des documents
+    // ══════════════════════════════════════════════════════════════
+    public function index(Request $request)
     {
         $user = Auth::user();
 
         if ($user && $user->hasRole('Admin')) {
             $documents = Document::withTrashed()
-                ->with(['user', 'documentType'])
-                ->get();
+                ->with(['user', 'documentType', 'media'])
+                ->latest()
+                ->paginate(20);
         } else {
             $documents = Document::whereNull('deleted_at')
-                ->with(['user', 'documentType'])
-                ->get();
+                ->with(['user', 'documentType', 'media'])
+                ->latest()
+                ->paginate(20);
         }
 
         return DocumentResource::collection($documents);
     }
-    // public function index()
-    // {
-    //     $user = Auth::user(); // Récupérer l'utilisateur authentifié
 
-    //     // Si l'utilisateur est un admin, récupérer tous les documents (y compris ceux supprimés)
-    //     if ($user && $user->hasRole('Admin')) {
-    //         $documents = Document::withTrashed()->with(['user', 'documentType'])->get();
-    //     } else {
-    //         // Récupère uniquement les documents actifs (non supprimés)
-    //         $documents = Document::whereNull('deleted_at')->with(['user', 'documentType'])->get();
-    //     }
-
-    //     // Retourne les documents en JSON, y compris les informations de l'utilisateur et du type de document
-    //     return response()->json($documents);
-    // }
-
-    // Afficher toutes les publications y compris celles supprimer en soft
+    // ══════════════════════════════════════════════════════════════
+    // Afficher toutes les publications y compris celles supprimer en soft delete — Admin seulement
+    // ══════════════════════════════════════════════════════════════
     public function getAllPublications(Request $request)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return response()->json(['success' => false, 'message' => 'Non authentifié.'], 401);
         }
 
         $documents = Document::withTrashed()
-            ->with(['user', 'documentType'])
-            ->get();
+            ->with(['user', 'documentType', 'media'])
+            ->latest()
+            ->paginate(20);
 
         return DocumentResource::collection($documents);
     }
-    //  public function getAllPublications(Request $request)
-    // {
-    //     // Vérifie si l'utilisateur est connecté
-    //     if (Auth::check()) {
-    //         // Récupère toutes les publications, y compris les supprimées (soft deleted)
-    //         $documents = Document::withTrashed()->with(['user', 'documentType'])->get(); // Inclut les soft deletes et les infos de l'utilisateur
 
-    //         return response()->json($documents); // Retourne le tableau directement
-    //     } else {
-    //         // Si l'utilisateur n'est pas connecté, retourne un message d'erreur
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Utilisateur non authentifié',
-    //         ], 401); // Code 401 pour l'authentification non autorisée
-    //     }
-    // }
+    // ══════════════════════════════════════════════════════════════
+    // STORE — Créer une publication
+    // ════════════════════════════════════════════════════════
 
-
-    /**
-     * Creer une nouvelle publication
-     */
-
-    // public function store(StoreDocumentRequest $request, ImageService $imageService, EmailNotificationService $emailService, SmsService $smsService)
-    // {
-    //     // Valider la demande et récupérer le fichier image
-    //     $validatedData = $request->validated();
-    //     $document = new Document();
-    //     $document->fill([
-    //         'OwnerFirstName' => $validatedData['OwnerFirstName'],
-    //         'OwnerLastName' => $validatedData['OwnerLastName'],
-    //         'Location' => $validatedData['Location'],
-    //         'statut' => 'non récupéré', // Valeur par défaut
-    //         'document_type_id' => $validatedData['document_type_id'],
-    //         'user_id' => Auth::id(),
-    //     ]);
-    //     // Conversion image
-    //     if ($request->hasFile('image') && $request->file('image')->isValid()) {
-    //         $fileName = time() . '_' . $request->file('image')->getClientOriginalName();
-    //         $path = 'documents/' . $fileName;
-    //         $document->image = $imageService->convertToWebP($request->file('image'), $path);
-    //     } else {
-    //         return response()->json(['error' => 'Aucun fichier image valide fourni'], 400);
-    //     }
-
-    //     $document->save();
-
-    //     // Notifier l'admin
-    //     // Notification::create([
-    //     //     'message' => 'Un nouveau document a été publié : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName,
-    //     //     'is_read' => false,
-    //     // ]);
-
-    //     // ── Log d'activité ──
-    //     activity()
-    //         ->causedBy(Auth::user())
-    //         ->performedOn($document)
-    //         ->withProperties([
-    //             'OwnerFirstName'   => $document->OwnerFirstName,
-    //             'OwnerLastName'    => $document->OwnerLastName,
-    //             'document_type_id' => $document->document_type_id,
-    //             'Location'         => $document->Location,
-    //         ])
-    //         ->log('Document publié');
-
-    //     // Recherche des déclarations correspondantes
-    //     $declarations = DeclarationDePerte::whereRaw('LOWER(FirstNameInDoc) = ?', [strtolower($document->OwnerFirstName)])
-    //         ->whereRaw('LOWER(LastNameInDoc) = ?', [strtolower($document->OwnerLastName)])
-    //         ->get();
-
-    //         foreach ($declarations as $declaration) {
-    //             $declarant = $declaration->user;
-    //             $phone = $declarant->Phone;
-    //             $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->uuid;
-
-    //             // Envoi email + log
-    //             $emailService->notifyDeclarant($document, $declarant, $phone, $documentUrl);
-
-    //             // Envoi SMS via ton SmsService déjà existant
-    //             $smsService->sendSMS($phone, 'Un document correspondant à votre déclaration de perte a été trouvé : ' .
-    //                 $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl
-    //             );
-    //         // Notification pour l'utilisateur
-    //         Notification::create([
-    //             'message' => 'Un document correspondant à une déclaration a été trouvé : ' .
-    //                          $document->OwnerFirstName . ' ' . $document->OwnerLastName,
-    //             'is_read' => false,
-    //         ]);
-    //     }
-
-    //     return response()->json([
-    //         'success' => true,
-    //         'message' => 'Document créé avec succès.',
-    //         'document' => $document
-    //     ], 201);
-    // }
-
-    public function store(StoreDocumentRequest $request,EmailNotificationService $emailService,SmsService $smsService)
+    public function store(StoreDocumentRequest $request, EmailNotificationService $emailService, SmsService $smsService)
     {
-    $validatedData = $request->validated();
+        $validatedData = $request->validated();
 
-    // ── Vérifie l'image AVANT de créer le document ──
-    if (!$request->hasFile('image') || !$request->file('image')->isValid()) {
-        return response()->json(['error' => 'Aucun fichier image valide fourni'], 400);
-    }
+        // ── Vérifie l'image AVANT de créer le document ──
+        if (! $request->hasFile('image') || ! $request->file('image')->isValid()) {
+            return response()->json(['error' => 'Aucun fichier image valide fourni'], 400);
+        }
 
-    // ── Crée le document SANS image ──
-    $document = Document::create([
-        'OwnerFirstName'    => $validatedData['OwnerFirstName'],
-        'OwnerLastName'     => $validatedData['OwnerLastName'],
-        'Location'          => $validatedData['Location'],
-        'statut'            => 'non récupéré',
-        'document_type_id'  => $validatedData['document_type_id'],
-        'user_id'           => Auth::id(),
-        'DocIdentification' => $validatedData['DocIdentification'] ?? null,
-    ]);
-
-    // ── Upload + conversions via MediaLibrary ──
-    $document->addMediaFromRequest('image')
-             ->toMediaCollection('document_image');
-    // → génère automatiquement : thumb, blurred, optimized en WebP
-
-    // ── Log d'activité ──
-    activity()
-        ->causedBy(Auth::user())
-        ->performedOn($document)
-        ->withProperties([
-            'OwnerFirstName'   => $document->OwnerFirstName,
-            'OwnerLastName'    => $document->OwnerLastName,
-            'document_type_id' => $document->document_type_id,
-            'Location'         => $document->Location,
-        ])
-        ->log('Document publié');
-
-    // ── Notifications ──
-    $declarations = DeclarationDePerte::whereRaw(
-        'LOWER(FirstNameInDoc) = ?', [strtolower($document->OwnerFirstName)]
-    )
-    ->whereRaw(
-        'LOWER(LastNameInDoc) = ?', [strtolower($document->OwnerLastName)]
-    )
-    ->get();
-
-    foreach ($declarations as $declaration) {
-        $declarant   = $declaration->user;
-        $phone       = $declarant->Phone;
-        $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->uuid;
-
-        $emailService->notifyDeclarant($document, $declarant, $phone, $documentUrl);
-        $smsService->sendSMS(
-            $phone,
-            'Un document correspondant à votre déclaration a été trouvé : ' .
-            $document->OwnerFirstName . ' ' . $document->OwnerLastName .
-            '. Consultez-le ici : ' . $documentUrl
-        );
-
-        Notification::create([
-            'message'                => 'Un document correspondant a été trouvé : ' .
-                                       $document->OwnerFirstName . ' ' . $document->OwnerLastName,
-            'is_read'                => false,
-            'declaration_de_perte_id'=> $declaration->id,
+        // ── Crée le document SANS image ──
+        $document = Document::create([
+            'OwnerFirstName'    => $validatedData['OwnerFirstName'],
+            'OwnerLastName'     => $validatedData['OwnerLastName'],
+            'Location'          => $validatedData['Location'],
+            'statut'            => 'non récupéré',
+            'document_type_id'  => $validatedData['document_type_id'],
+            'user_id'           => Auth::id(),
+            'DocIdentification' => $validatedData['DocIdentification'] ?? null,
         ]);
+
+        // ── Upload + conversions via MediaLibrary ── génère automatiquement : thumb, blurred, optimized en WebP
+        $document->addMediaFromRequest('image')
+            ->toMediaCollection('document_image');
+
+        // ── Log d'activité ──
+        activity()
+            ->causedBy(Auth::user())
+            ->performedOn($document)
+            ->withProperties([
+                'OwnerFirstName'   => $document->OwnerFirstName,
+                'OwnerLastName'    => $document->OwnerLastName,
+                'document_type_id' => $document->document_type_id,
+                'Location'         => $document->Location,
+            ])
+            ->log('Document publié');
+
+        // ── Notifications ──
+        $declarations = DeclarationDePerte::whereRaw(
+            'LOWER(FirstNameInDoc) = ?',
+            [strtolower($document->OwnerFirstName)]
+        )
+            ->whereRaw(
+                'LOWER(LastNameInDoc) = ?',
+                [strtolower($document->OwnerLastName)]
+            )
+            ->with('user')
+            ->get();
+
+        foreach ($declarations as $declaration) {
+            dispatch(new NotifyDeclarantJob(
+                $document,
+                $declaration->user,
+                'https://sendoctrack.netlify.app/document/' . $document->uuid,
+                $declaration->id
+            ));
+        }
+
+        // Invalide le cache des stats après ajout
+        Cache::forget('statistics_month_' . now()->format('Y_m'));
+        Cache::forget('publications_by_type');
+        Cache::forget('publications_by_location');
+
+        return response()->json([
+            'success'  => true,
+            'message'  => 'Document créé avec succès.',
+            'document' => new DocumentResource($document->load(['user', 'documentType'])),
+        ], 201);
     }
 
-    return response()->json([
-        'success'  => true,
-        'message'  => 'Document créé avec succès.',
-        'document' => new DocumentResource($document->load(['user', 'documentType'])),
-    ], 201);
-}
-
-     // Méthode pour envoyer un SMS via l'API Orange
+    // Méthode pour envoyer un SMS via l'API Orange
     // protected function sendSMS($phoneNumber, $message)
     // {
     //     // Log du numéro de téléphone avant nettoyage
@@ -389,8 +281,8 @@ class DocumentController extends Controller
      */
     public function requestRestitution($uuid)
     {
-         // Récupérer le document concerné par son uuid
-         $document = Document::where('uuid', $uuid)->firstOrFail();
+        // Récupérer le document concerné par son uuid
+        $document = Document::where('uuid', $uuid)->firstOrFail();
 
         // L'utilisateur connecté qui clique sur "Restituer"
         $fromUser = Auth::user();
@@ -399,37 +291,34 @@ class DocumentController extends Controller
         if ($fromUser->id === $document->user_id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous ne pouvez pas demander la restitution de votre propre document.'
+                'message' => 'Vous ne pouvez pas demander la restitution de votre propre document.',
             ], 403); // Code 403 Forbidden
         }
 
         // Vérifier si une demande de restitution pour ce document a déjà été faite par cet utilisateur
         $existingEmailLog = EmailLog::where('requester_user_id', $fromUser->id)
-            // ->where('document_id', $documentId)
+                                                // ->where('document_id', $documentId)
             ->where('document_id', $document->uuid) // Utilisation de uuid
-            ->whereNotNull('publisher_user_id') // S'assurer qu'il s'agit bien d'une demande de restitution
+            ->whereNotNull('publisher_user_id')     // S'assurer qu'il s'agit bien d'une demande de restitution
             ->first();
 
         if ($existingEmailLog) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous avez déjà demandé la restitution de ce document.'
+                'message' => 'Vous avez déjà demandé la restitution de ce document.',
             ], 400); // Code 400 Bad Request
         }
 
         // L'utilisateur qui a publié le document
         $toUser = $document->user;
-
+                                                                                      // Envoyer la notification par SMS
+        $phoneNumber = $toUser->Phone;                                                // Assure-toi que le champ du numéro de téléphone est correct
+        $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->uuid; // Utilisation de uuid
+        $message     = 'Bonjour, vous avez une demande de restitution pour le document : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
         // Envoyer la notification par email
         $toUser->notify(new RestitutionRequestNotification($fromUser, $document));
 
-        // Envoyer la notification par SMS
-        $phoneNumber = $toUser->Phone; // Assure-toi que le champ du numéro de téléphone est correct
-        // $documentUrl = 'https://sendoctrack.netlify.app/document/' . $documentId; // URL pour afficher le document
-        $documentUrl = 'https://sendoctrack.netlify.app/document/' . $document->uuid; // Utilisation de uuid
-        $message = 'Bonjour, vous avez une demande de restitution pour le document : ' . $document->OwnerFirstName . ' ' . $document->OwnerLastName . '. Consultez-le ici : ' . $documentUrl;
-
-         // Appel à la méthode pour l'envoi de SMS
+        // Appel à la méthode pour l'envoi de SMS
         // $this->sendSMS($phoneNumber, $message);
         //  $smsService->sendSMS($toUser->Phone, $message);
 
@@ -438,9 +327,9 @@ class DocumentController extends Controller
             ->causedBy($fromUser)
             ->performedOn($document)
             ->withProperties([
-                'document_uuid'  => $document->uuid,
-                'from_user_id'   => $fromUser->id,
-                'to_user_id'     => $toUser->id,
+                'document_uuid' => $document->uuid,
+                'from_user_id'  => $fromUser->id,
+                'to_user_id'    => $toUser->id,
             ])
             ->log('Demande de restitution envoyée');
 
@@ -448,44 +337,37 @@ class DocumentController extends Controller
         return response()->json(['message' => 'Demande de restitution envoyée avec succès.']);
     }
 
-     /**
+    /**
      * Afficher le document specifique.
      */
     public function show($uuid)
     {
-        $document = Document::with(['user', 'documentType'])
+        $document = Document::with(['user', 'documentType', 'media'])
             ->where('uuid', $uuid)
             ->firstOrFail();
 
         return new DocumentResource($document);
     }
 
-
-    // public function show($uuid) // Changé de $id à $uuid
-    // {
-    //     $document = Document::with(['user', 'documentType'])->where('uuid', $uuid)->firstOrFail();
-    //             if (!$document) {
-    //         return response()->json(['message' => 'Document not found'], 404);
-    //     }
-    //     return response()->json($document);
-    // }
-
     /**
      * Mise à jour de document
      */
-    public function update(UpdateDocumentRequest $request, $uuid) // Changé de Document $document à $uuid
+    public function update(UpdateDocumentRequest $request, $uuid)
     {
         $document = Document::where('uuid', $uuid)->firstOrFail();
 
         if (Auth::id() !== $document->user_id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous n\'êtes pas autorisé à mettre à jour ce document.'
+                'message' => 'Vous n\'êtes pas autorisé à mettre à jour ce document.',
             ], 403);
         }
 
         $validatedData = $request->validated();
         $document->update($validatedData);
+
+        // Invalide le cache si le statut change
+        Cache::forget('statistics_month_' . now()->format('Y_m'));
 
         // ── Log d'activité ──
         activity()
@@ -495,21 +377,20 @@ class DocumentController extends Controller
             ->log('Document mis à jour');
 
         return response()->json([
-            'success' => true,
-            'message' => 'Document mis à jour avec succès.',
-            'document' => $document
+            'success'  => true,
+            'message'  => 'Document mis à jour avec succès.',
+            'document' => new DocumentResource($document->load(['user', 'documentType'])),
         ]);
     }
 
-
-    /**
-     * Suppression de suppression de document
-     */
+    // ══════════════════════════════════════════════════════════════
+    // DESTROY — Suppression douce
+    // ══════════════════════════════════════════════════════════════
     public function destroy($uuid)
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Vous devez être authentifié pour effectuer cette action.',
@@ -522,7 +403,7 @@ class DocumentController extends Controller
         if ($user->hasRole('Admin') || $document->user_id === $user->id) {
 
             // ── Log d'activité ──
-             /** @var \App\Models\User $user */
+            /** @var \App\Models\User $user */
             $user = Auth::user();
             activity()
                 ->causedBy($user)
@@ -534,6 +415,10 @@ class DocumentController extends Controller
                 ->log('Document supprimé');
 
             $document->delete();
+
+            // Invalide le cache
+            Cache::forget('publications_by_type');
+            Cache::forget('publications_by_location');
 
             return response()->json([
                 'success' => true,
@@ -547,26 +432,25 @@ class DocumentController extends Controller
         ], 403);
     }
 
-
-    // Fonction de la restauration d'un document supprimé
+                                                  // Fonction de la restauration d'un document supprimé
     public function restoreTrashedDocument($uuid) // Changé de $id à $uuid
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous devez être authentifié pour effectuer cette action.'
+                'message' => 'Vous devez être authentifié pour effectuer cette action.',
             ], 401);
         }
 
         $document = Document::onlyTrashed()->where('uuid', $uuid)->firstOrFail();
 
         if ($document->user_id === $user->id) {
-                // ── Log d'activité ──
-                /** @var \App\Models\User $user */
-                $user = Auth::user();
-                activity()
+            // ── Log d'activité ──
+            /** @var \App\Models\User $user */
+            $user = Auth::user();
+            activity()
                 ->causedBy($user)
                 ->performedOn($document)
                 ->withProperties([
@@ -577,38 +461,40 @@ class DocumentController extends Controller
             $document->restore();
             return response()->json([
                 'success' => true,
-                'message' => 'Document restauré avec succès.'
+                'message' => 'Document restauré avec succès.',
             ]);
         }
 
         return response()->json([
             'success' => false,
-            'message' => 'Accès refusé. Vous ne pouvez restaurer que vos propres documents.'
+            'message' => 'Accès refusé. Vous ne pouvez restaurer que vos propres documents.',
         ], 403);
     }
 
-
-    // Fonction pour obtenir la liste des documents supprimés
+    // ══════════════════════════════════════════════════════════════
+    // TRASHED — Documents supprimés de l'utilisateur connecté
+    // ══════════════════════════════════════════════════════════════
     public function trashedDocuments()
     {
         $user = Auth::user(); // Récupérer l'utilisateur authentifié
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous devez être authentifié pour effectuer cette action.'
+                'message' => 'Vous devez être authentifié pour effectuer cette action.',
             ], 401); // Code 401 Unauthorized
         }
 
         // Récupérer uniquement les documents supprimés de l'utilisateur connecté
         $documents = Document::onlyTrashed()
             ->where('user_id', $user->id)
-            ->with('user') // Charge les informations de l'utilisateur associé à chaque document
-            ->get();
+            ->with(['user', 'media']) // Charge les informations de l'utilisateur associé à chaque document
+            ->latest()
+            ->paginate(20);
 
         return response()->json([
             'success' => true,
-            'data' => $documents
+            'data'    => $documents,
         ]);
     }
 
@@ -616,188 +502,189 @@ class DocumentController extends Controller
     public function OwnPub()
     {
         $documents = Document::where('user_id', Auth::id())
-            ->with(['user', 'documentType'])
-            ->get();
+            ->with(['user', 'documentType', 'media'])
+            ->latest()
+            ->paginate(20);
 
         return DocumentResource::collection($documents);
     }
-    // public function OwnPub()
-    // {
-    //     // Récupère uniquement les documents de l'utilisateur connecté
-    //     $documents = Document::where('user_id', Auth::id())->with(['user', 'documentType'])->get();
 
-    //     // Retourne les documents en JSON, y compris les informations de l'utilisateur
-    //     return response()->json($documents);
-    // }
-
-
-    // Fonction pour obtenir uniquement les documents supprimés
+    // ══════════════════════════════════════════════════════════════
+    // ADMIN — Documents supprimés
+    // ══════════════════════════════════════════════════════════════
     public function getDeletedDocuments()
     {
         $user = Auth::user(); // Récupérer l'utilisateur authentifié
 
         // Vérifier si l'utilisateur est un admin
-        if (!$user || !$user->hasRole('Admin')) {
+        if (! $user || ! $user->hasRole('Admin')) {
             return response()->json([
                 'success' => false,
-                'message' => 'Accès refusé. Vous devez être un administrateur pour effectuer cette action.'
+                'message' => 'Accès refusé. Vous devez être un administrateur pour effectuer cette action.',
             ], 403);
         }
 
         // Récupérer uniquement les documents supprimés (soft deleted)
-        $documents = Document::onlyTrashed()->with(['user', 'documentType'])->get();
+        $documents = Document::onlyTrashed()->with(['user', 'documentType', 'media'])
+            ->latest()
+            ->paginate(20);
 
-        return response()->json($documents);
+        return DocumentResource::collection($documents);
     }
 
-
-    // Fonction pour obtenir les documents dont le statut est "récupéré"
+    // ══════════════════════════════════════════════════════════════
+    // ADMIN — Documents récupérés
+    // ══════════════════════════════════════════════════════════════
     public function getRecoveredDocuments()
     {
         $user = Auth::user(); // Récupérer l'utilisateur authentifié
 
         // Vérifier si l'utilisateur est un admin
-        if (!$user || !$user->hasRole('Admin')) {
+        if (! $user || ! $user->hasRole('Admin')) {
             return response()->json([
                 'success' => false,
-                'message' => 'Accès refusé. Vous devez être un administrateur pour effectuer cette action.'
+                'message' => 'Accès refusé. Vous devez être un administrateur pour effectuer cette action.',
             ], 403);
         }
 
         // Récupérer les documents dont le statut est "récupéré", y compris ceux qui sont soft-deleted
         $documents = Document::withTrashed()
             ->where('statut', 'récupéré')
-            ->with(['user', 'documentType'])
-            ->get();
+            ->with(['user', 'documentType', 'media'])
+            ->latest()
+            ->paginate(20);
 
-        return response()->json($documents);
+        return DocumentResource::collection($documents);
     }
 
-
-   // Fonction pour obtenir les documents dont le statut est "non récupéré"
+    // ══════════════════════════════════════════════════════════════
+    // ADMIN — Documents non récupérés
+    // ══════════════════════════════════════════════════════════════
     public function getNotRecoveredDocuments()
     {
         $user = Auth::user(); // Récupérer l'utilisateur authentifié
 
         // Vérifier si l'utilisateur est un admin
-        if (!$user || !$user->hasRole('Admin')) {
+        if (! $user || ! $user->hasRole('Admin')) {
             return response()->json([
                 'success' => false,
-                'message' => 'Accès refusé. Vous devez être un administrateur pour effectuer cette action.'
+                'message' => 'Accès refusé. Vous devez être un administrateur pour effectuer cette action.',
             ], 403);
         }
 
         // Récupérer les documents dont le statut est "non récupéré", y compris ceux qui sont soft-deleted
         $documents = Document::withTrashed()
             ->where('statut', 'non récupéré')
-            ->with(['user', 'documentType'])
-            ->get();
+            ->with(['user', 'documentType', 'media'])
+            ->latest()
+            ->paginate(20);
 
-        return response()->json($documents);
+        return DocumentResource::collection($documents);
     }
 
+    // ══════════════════════════════════════════════════════════════
+    // STATISTIQUES — avec cache
+    // ══════════════════════════════════════════════════════════════
 
     // Fonction pour obtenir les publications par type
     public function getPublicationsByType()
     {
-        $publications = Document::select('document_type_id', DB::raw('count(*) as count'))
-                                ->groupBy('document_type_id')
-                                ->with('documentType') // Charger le nom du type
-                                ->get();
+        $data = Cache::remember('publications_by_type', 1800, function () {
+            return Document::select('document_type_id', DB::raw('count(*) as count'))
+                ->groupBy('document_type_id')
+                ->with('documentType')
+                ->get()
+                ->map(fn($p) => [
+                    'typeName' => $p->documentType->TypeName,
+                    'count'    => $p->count,
+                ]);
+        });
 
-        return response()->json([
-            'data' => $publications->map(function($publication) {
-                return [
-                    'typeName' => $publication->documentType->TypeName,
-                    'count' => $publication->count,
-                ];
-            })
-        ]);
+        return response()->json(['data' => $data]);
     }
 
     // Fonction pour obtenir les données de restitution
     public function getRestitutionData()
     {
-        $restitutionCount = EmailLog::where('subject', 'LIKE', '%Demande de restitution%')->count();
-        $publicationCount = Document::withTrashed()->count(); // ou avec les soft deleted si nécessaire
+        $data = Cache::remember('restitution_data', 900, function () {
+            return [
+                'restitutionCount' => EmailLog::where(
+                    'subject', 'LIKE', '%Demande de restitution%'
+                )->count(),
+                'publicationCount' => Document::withTrashed()->count(),
+            ];
+        });
 
-        return response()->json([
-            'restitutionCount' => $restitutionCount,
-            'publicationCount' => $publicationCount,
-        ]);
+        return response()->json($data);
     }
 
     // Fonction pour obtenir les données d'activité des emails
     public function getEmailActivity()
     {
-        // Compte le nombre d'emails envoyés par sujet
-        $emailCounts = EmailLog::select('subject', DB::raw('count(*) as count'))
-            ->groupBy('subject')
-            ->get();
+        $data = Cache::remember('email_activity', 900, function () {
+            return EmailLog::select('subject', DB::raw('count(*) as count'))
+                ->groupBy('subject')
+                ->get();
+        });
 
-        return response()->json($emailCounts);
+        return response()->json($data);
     }
-
 
     /**
      * Fonction pour obtenir les statistiques de publications et déclarations de perte par mois
      */
     public function getStatistics()
     {
-        // Récupérer les données par date
-        $startDate = Carbon::now()->startOfMonth(); // Début du mois actuel
-        $endDate = Carbon::now()->endOfMonth(); // Fin du mois actuel
-
-        $data = [];
-
-        // Boucle sur chaque jour du mois
-        for ($date = $startDate; $date <= $endDate; $date->addDay()) {
-            $formattedDate = $date->toDateString(); // Format de la date YYYY-MM-DD
-
-            // Compte les déclarations de perte pour la date donnée
-            $declarationsCount = DeclarationDePerte::whereDate('created_at', $formattedDate)->count();
-
-            // Compte les publications pour la date donnée
-            $publicationsCount = Document::whereDate('created_at', $formattedDate)->count();
-
-            // Ajoute les données au tableau
-            $data[] = [
-                'date' => $formattedDate,
-                'declarations' => $declarationsCount,
-                'publications' => $publicationsCount,
-            ];
-        }
-
+        // Créer une clé de cache unique pour les statistiques mensuelles
+        $cacheKey = 'statistics_month_' . now()->format('Y_m');
+        // Récupérer les données par date avec mise en cache
+        $data = Cache::remember($cacheKey, 3600, function () {
+            $startDate = Carbon::now()->startOfMonth();
+            $endDate   = Carbon::now()->endOfMonth();
+            $result    = [];
+            // Boucle sur chaque jour du mois
+            for ($date = $startDate->copy(); $date <= $endDate; $date->addDay()) {
+                $formattedDate = $date->toDateString();
+                // Compte les déclarations de perte et les publications pour la date donnée
+                $result[] = [
+                    'date'         => $formattedDate,
+                    'declarations' => DeclarationDePerte::whereDate(
+                        'created_at', $formattedDate
+                    )->count(),
+                    'publications' => Document::whereDate(
+                        'created_at', $formattedDate
+                    )->count(),
+                ];
+            }
+            // Récupérer les statistiques de publications et déclarations de perte par mois
+            return $result;
+        });
+        // Retourner les données en JSON
         return response()->json(['data' => $data]);
     }
 
     // Fonction pour obtenir les statistiques de publications et déclarations de perte par type de document
     public function getDocumentStatusCountWithTrashed(Request $request)
     {
-        // Vérifie si l'utilisateur est connecté
-        if (Auth::check()) {
-            // Récupère le nombre de documents avec le statut "récupéré", y compris ceux soft deleted
-            $recoveredCount = Document::withTrashed()->where('statut', 'récupéré')->count();
-
-            // Récupère le nombre de documents avec le statut "non récupéré", y compris ceux soft deleted
-            $notRecoveredCount = Document::withTrashed()->where('statut', 'non récupéré')->count();
-
-            // Retourne les résultats en JSON
-            return response()->json([
-                'récupéré' => $recoveredCount,
-                'non_récupéré' => $notRecoveredCount,
-            ]);
-        } else {
-            // Si l'utilisateur n'est pas connecté, retourne un message d'erreur
+        // Verifier si le user est authentifié
+        if (! Auth::check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Utilisateur non authentifié',
-            ], 401); // Code 401 pour l'authentification non autorisée
+            ], 401);
         }
+
+        $data = Cache::remember('document_status_count', 900, function () {
+            return [
+                'récupéré'     => Document::withTrashed()->where('statut', 'récupéré')->count(),
+                'non_récupéré' => Document::withTrashed()->where('statut', 'non récupéré')->count(),
+            ];
+        });
+
+        return response()->json($data);
     }
 
-
-     /**
+    /**
      * Fonction pour obtenir les coordonnées d'une ville
      */
 
@@ -807,30 +694,30 @@ class DocumentController extends Controller
      * @param string $location Nom de la localité (ex. "Dakar")
      * @return array Tableau contenant latitude, longitude et un message d'erreur éventuel
      */
+    // ══════════════════════════════════════════════════════════════
+    // GÉOLOCALISATION — avec cache 48h
+    // ══════════════════════════════════════════════════════════════
     private function getCoordinates(string $location): array
     {
         $cacheKey = 'coords_' . Str::slug($location);
 
-        return Cache::remember($cacheKey, now()->addDays(30), function() use ($location) {
+        return Cache::remember($cacheKey, now()->addDays(30), function () use ($location) {
             try {
-                $response = Http::withoutVerifying() // ← désactive SSL en local
-                    ->withHeaders([
-                        'User-Agent' => 'MonApp/1.0 (contact@monapp.com)',
-                    ])
+                $response = Http::withoutVerifying()
+                    ->withHeaders(['User-Agent' => 'DocTrack/1.0 (sendoctrack@gmail.com)'])
                     ->get('https://nominatim.openstreetmap.org/search', [
                         'q'      => $location . ', Sénégal',
                         'format' => 'json',
                         'limit'  => 1,
                     ]);
 
-                if ($response->successful() && !empty($response->json())) {
+                if ($response->successful() && ! empty($response->json())) {
                     $data = $response->json()[0];
                     return [
                         'latitude'  => (float) $data['lat'],
                         'longitude' => (float) $data['lon'],
                     ];
                 }
-
             } catch (\Exception $e) {
                 Log::error("Geocoding error for '$location': " . $e->getMessage());
             }
@@ -838,104 +725,26 @@ class DocumentController extends Controller
             return ['latitude' => null, 'longitude' => null];
         });
     }
-     // Méthode pour récupérer les publications et leurs coordonnées
+    // Méthode pour récupérer les publications et leurs coordonnées
     public function getPublicationsByLocation()
     {
-        $publications = Document::select('Location', DB::raw('COUNT(*) as publications'))
-            ->groupBy('Location')
-            ->get();
+        $data = Cache::remember('publications_by_location', now()->addHours(2), function () {
+            $publications = Document::select('Location', DB::raw('COUNT(*) as publications'))
+                ->groupBy('Location')
+                ->get();
 
-        $regions = $publications->map(function($item) {
-            $coords = $this->getCoordinates($item->Location);
-
-            return [
-                'name'         => $item->Location,
-                'latitude'     => $coords['latitude'],
-                'longitude'    => $coords['longitude'],
-                'publications' => $item->publications,
-            ];
+            return $publications->map(function ($item) {
+                $coords = $this->getCoordinates($item->Location);
+                return [
+                    'name'         => $item->Location,
+                    'latitude'     => $coords['latitude'],
+                    'longitude'    => $coords['longitude'],
+                    'publications' => $item->publications,
+                ];
+            })->values();
         });
 
-        return response()->json($regions->values());
+        return response()->json($data);
     }
-
-//     public function getCoordinates($location)
-// {
-//     $cacheKey = 'coordinates_' . $location;
-//     if (Cache::has($cacheKey)) {
-//         return Cache::get($cacheKey);
-//     }
-
-//     $client = new Client();
-//     $url = 'https://us1.locationiq.com/v1/search.php'; // Limites gratuites : Jusqu'à 5 000 requêtes gratuites par jour.
-
-//     try {
-//         $response = $client->get($url, [
-//             'query' => [
-//                 'key' => 'pk.5c10c9c439934952e54b7cc9a53a5474', // Remplace par ta clé API
-//                 'q' => $location,
-//                 'format' => 'json',
-//                 'limit' => 1
-//             ]
-//         ]);
-
-//         $data = json_decode($response->getBody(), true);
-
-//         $coordinates = [
-//             'latitude' => $data[0]['lat'] ?? null,
-//             'longitude' => $data[0]['lon'] ?? null
-//         ];
-
-//         Cache::put($cacheKey, $coordinates, 86400);
-
-//         return $coordinates;
-//     } catch (\Exception $e) {
-//         return [
-//             'latitude' => null,
-//             'longitude' => null,
-//             'error' => 'Erreur lors de la récupération des coordonnées.'
-//         ];
-//     }
-// }
-
-
-// public function getCoordinates($location)
-// {
-//     $cacheKey = 'coordinates_' . $location;
-//     if (Cache::has($cacheKey)) {
-//         return Cache::get($cacheKey);
-//     }
-
-//     $client = new Client();
-//     $url = 'https://geocode.search.hereapi.com/v1/geocode'; // Limites gratuites : 250 000 transactions par mois.
-
-//     try {
-//         $response = $client->get($url, [
-//             'query' => [
-//                 'q' => $location,
-//                 'apiKey' => 'MXUuNBUTEgr5l1rZSVFDxE5qvITOyi55mKgmRR0ZwA8' // Remplace par ta clé API
-//             ]
-//         ]);
-
-//         $data = json_decode($response->getBody(), true);
-
-//         $coordinates = [
-//             'latitude' => $data['items'][0]['position']['lat'] ?? null,
-//             'longitude' => $data['items'][0]['position']['lng'] ?? null
-//         ];
-
-//         Cache::put($cacheKey, $coordinates, 86400);
-
-//         return $coordinates;
-//     } catch (\Exception $e) {
-//         return [
-//             'latitude' => null,
-//             'longitude' => null,
-//             'error' => 'Erreur lors de la récupération des coordonnées.'
-//         ];
-//     }
-// }
-
-
 
 }
