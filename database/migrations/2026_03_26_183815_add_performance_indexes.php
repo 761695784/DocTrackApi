@@ -35,7 +35,7 @@ return new class extends Migration
 
         // ── Media (MediaLibrary) ──
         Schema::table('media', function (Blueprint $table) {
-            $table->index(['model_type', 'model_id']);
+            // $table->index(['model_type', 'model_id']);
             $table->index('collection_name');
         });
 
@@ -83,7 +83,7 @@ return new class extends Migration
         });
 
         Schema::table('media', function (Blueprint $table) {
-            $table->dropIndex(['model_type', 'model_id']);
+            // $table->dropIndex(['model_type', 'model_id']);
             $table->dropIndex(['collection_name']);
         });
 

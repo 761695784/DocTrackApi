@@ -60,7 +60,7 @@ return [
 
                 // ── Backup config ──
             'dump' => [
-                'dump_binary_path' => 'C:/Programmes/MySQL/MySQL Server 8.0/bin',
+                'dump_binary_path' => 'C:/Program Files/MySQL/MySQL Server 8.0/bin', // ← Program Files pas Programmes
                 'use_single_transaction' => true,
                 'timeout' => 60 * 5,
             ],

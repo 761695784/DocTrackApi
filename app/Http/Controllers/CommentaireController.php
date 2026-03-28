@@ -1,13 +1,12 @@
 <?php
-
 namespace App\Http\Controllers;
 
-use App\Models\Document;
-use App\Models\Commentaire;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
 use App\Http\Requests\StoreCommentaireRequest;
 use App\Mail\NewCommentNotification;
+use App\Models\Commentaire;
+use App\Models\Document;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 
 class CommentaireController extends Controller
 {
@@ -17,10 +16,9 @@ class CommentaireController extends Controller
     public function index()
     {
         // Récupérer et retourner tous les commentaires avec leurs utilisateurs et documents associés
-        $commentaires = Commentaire::with(['user', 'document'])->get(); 
+        $commentaires = Commentaire::with(['user', 'document'])->get();
         return response()->json($commentaires);
     }
-
 
     /**
      * Store a newly created resource in storage.
@@ -28,10 +26,10 @@ class CommentaireController extends Controller
     public function store(StoreCommentaireRequest $request)
     {
         // Vérifier si l'utilisateur est authentifié
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous devez être authentifié pour commenter.'
+                'message' => 'Vous devez être authentifié pour commenter.',
             ], 401);
         }
 
@@ -40,8 +38,8 @@ class CommentaireController extends Controller
 
         // Créer un nouveau commentaire
         $commentaire = Commentaire::create([
-            'contenu' => $request->contenu,
-            'user_id' => $user->id,
+            'contenu'     => $request->contenu,
+            'user_id'     => $user->id,
             'document_id' => $request->document_id,
         ]);
 
@@ -56,9 +54,9 @@ class CommentaireController extends Controller
 
         // Retourner une réponse JSON avec le commentaire créé
         return response()->json([
-            'success' => true,
-            'message' => 'Commentaire créé avec succès.',
-            'commentaire' => $commentaire
+            'success'     => true,
+            'message'     => 'Commentaire créé avec succès.',
+            'commentaire' => $commentaire,
         ], 201);
     }
     /**
@@ -81,7 +79,7 @@ class CommentaireController extends Controller
         if (Auth::id() !== $commentaire->user_id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous n\'êtes pas autorisé à supprimer ce commentaire.'
+                'message' => 'Vous n\'êtes pas autorisé à supprimer ce commentaire.',
             ], 403);
         }
 
@@ -90,20 +88,20 @@ class CommentaireController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Commentaire supprimé avec succès.'
+            'message' => 'Commentaire supprimé avec succès.',
         ]);
     }
 
-public function getCommentairesByDocument($uuid)
-{
-    // Trouver le document par son UUID
-    $document = Document::where('uuid', $uuid)->firstOrFail();
+    public function getCommentairesByDocument($uuid)
+    {
+        // Trouver le document par son UUID
+        $document = Document::where('uuid', $uuid)->firstOrFail();
 
-    // Récupérer les commentaires via la relation
-    $commentaires = $document->comments()->with('user')->get();
+        // Récupérer les commentaires via la relation
+        $commentaires = $document->comments()->with('user')->get();
 
-    // Retourner les commentaires au format JSON
-    return response()->json($commentaires);
-}
+        // Retourner les commentaires au format JSON
+        return response()->json($commentaires);
+    }
 
 }

@@ -19,6 +19,7 @@ return new class extends Migration
             $table->foreignId('document_type_id')->constrained('document_types')->onDelete('cascade');
             $table->text('description')->nullable();
             $table->string('pdf_path')->nullable(); // Pour stocker le chemin du fichier PDF
+            $table->softDeletes();
             $table->timestamps();
         });
     }

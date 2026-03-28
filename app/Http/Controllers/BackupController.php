@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -11,7 +10,7 @@ class BackupController extends Controller
 {
     private function checkAdmin()
     {
-        if (!Auth::user()?->hasRole('Admin')) {
+        if (! Auth::user()?->hasRole('Admin')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Accès refusé. Administrateur requis.',
@@ -23,49 +22,49 @@ class BackupController extends Controller
     /**
      * Lancer un backup manuellement
      */
-  public function runBackup()
-{
-    if ($denied = $this->checkAdmin()) return $denied;
+    public function runBackup()
+    {
+        if ($denied = $this->checkAdmin()) {
+            return $denied;
+        }
 
-    try {
-        Artisan::call('backup:run');
-        $output = Artisan::output();
+        try {
+            // ← Lance en arrière-plan au lieu de bloquer la requête
+            dispatch(function () {
+                Artisan::call('backup:run');
+            })->afterResponse();
 
-        // ── Fix UTF-8 Windows ──
-        $output = mb_convert_encoding($output, 'UTF-8', 'UTF-8');
-        $output = iconv('UTF-8', 'UTF-8//IGNORE', $output);
+            activity()
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'triggered_at' => now()->toDateTimeString(),
+                    'type'         => 'manual',
+                ])
+                ->log('Backup manuel déclenché par un administrateur');
 
-        activity()
-            ->causedBy(Auth::user())
-            ->withProperties([
-                'triggered_at' => now()->toDateTimeString(),
-                'type'         => 'manual',
-            ])
-            ->log('Backup manuel déclenché par un administrateur');
+            // ← Répond immédiatement sans attendre la fin du backup
+            return response()->json([
+                'success' => true,
+                'message' => 'Sauvegarde lancée en arrière-plan. Actualisez la liste dans quelques instants.',
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Sauvegarde lancée avec succès.',
-            'output'  => trim($output),
-        ]);
-
-    } catch (\Exception $e) {
-        Log::error('Erreur backup manuel', ['error' => $e->getMessage()]);
-        return response()->json([
-            'success' => false,
-            'message' => 'Erreur : ' . mb_convert_encoding(
-                $e->getMessage(), 'UTF-8', 'UTF-8'
-            ),
-        ], 500);
+        } catch (\Exception $e) {
+            Log::error('Erreur backup manuel', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur : ' . $e->getMessage(),
+            ], 500);
+        }
     }
-}
 
     /**
      * Liste des backups disponibles
      */
     public function listBackups()
     {
-        if ($denied = $this->checkAdmin()) return $denied;
+        if ($denied = $this->checkAdmin()) {
+            return $denied;
+        }
 
         try {
             $appName    = config('app.name', 'DocTrack');
@@ -116,65 +115,71 @@ class BackupController extends Controller
     /**
      * Statut de santé des backups
      */
-public function backupStatus()
-{
-    if ($denied = $this->checkAdmin()) return $denied;
+    public function backupStatus()
+    {
+        if ($denied = $this->checkAdmin()) {
+            return $denied;
+        }
 
-    try {
-        Artisan::call('backup:monitor');
-        $output = iconv('UTF-8', 'UTF-8//IGNORE', Artisan::output());
+        try {
+            Artisan::call('backup:monitor');
+            $output = iconv('UTF-8', 'UTF-8//IGNORE', Artisan::output());
 
-        return response()->json([
-            'success' => true,
-            'status'  => trim($output) ?: 'Tous les backups sont sains.',
-        ]);
+            return response()->json([
+                'success' => true,
+                'status'  => trim($output) ?: 'Tous les backups sont sains.',
+            ]);
 
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => iconv('UTF-8', 'UTF-8//IGNORE', $e->getMessage()),
-        ], 500);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => iconv('UTF-8', 'UTF-8//IGNORE', $e->getMessage()),
+            ], 500);
+        }
     }
-}
     /**
      * Nettoyer les vieux backups
      */
-   public function cleanBackups()
-{
-    if ($denied = $this->checkAdmin()) return $denied;
+    public function cleanBackups()
+    {
+        if ($denied = $this->checkAdmin()) {
+            return $denied;
+        }
 
-    try {
-        Artisan::call('backup:clean');
-        $output = iconv('UTF-8', 'UTF-8//IGNORE', Artisan::output());
+        try {
+            Artisan::call('backup:clean');
+            $output = iconv('UTF-8', 'UTF-8//IGNORE', Artisan::output());
 
-        activity()
-            ->causedBy(Auth::user())
-            ->log('Nettoyage des backups déclenché manuellement');
+            activity()
+                ->causedBy(Auth::user())
+                ->log('Nettoyage des backups déclenché manuellement');
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Nettoyage effectué.',
-            'output'  => trim($output),
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Nettoyage effectué.',
+                'output'  => trim($output),
+            ]);
 
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => iconv('UTF-8', 'UTF-8//IGNORE', $e->getMessage()),
-        ], 500);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => iconv('UTF-8', 'UTF-8//IGNORE', $e->getMessage()),
+            ], 500);
+        }
     }
-}
 
     /**
      * Télécharger un backup
      */
     public function downloadBackup(Request $request)
     {
-        if ($denied = $this->checkAdmin()) return $denied;
+        if ($denied = $this->checkAdmin()) {
+            return $denied;
+        }
 
         $filename = $request->query('file');
 
-        if (!$filename || !str_ends_with($filename, '.zip')) {
+        if (! $filename || ! str_ends_with($filename, '.zip')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Nom de fichier invalide.',
@@ -188,7 +193,7 @@ public function backupStatus()
             'app' . DIRECTORY_SEPARATOR . $appName . DIRECTORY_SEPARATOR . $filename
         );
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Fichier introuvable.',

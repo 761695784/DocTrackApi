@@ -27,6 +27,7 @@ class Document extends Model implements HasMedia
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
+    
     public function documentType() {
         return $this->belongsTo(DocumentType::class);
     }
@@ -34,6 +35,8 @@ class Document extends Model implements HasMedia
     public function user() {
         return $this->belongsTo(User::class);
     }
+    
+
     public function comments() {
         return $this->hasMany(Commentaire::class);
     }

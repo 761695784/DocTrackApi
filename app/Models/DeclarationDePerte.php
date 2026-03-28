@@ -17,8 +17,6 @@ class DeclarationDePerte extends Model
 
     protected $guarded = [];
 
-        
-
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -26,6 +24,7 @@ class DeclarationDePerte extends Model
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
+    
     public function documentType() {
         return $this->belongsTo(DocumentType::class, 'document_type_id'); // Assurez-vous que 'document_type_id' est la bonne clé étrangère
     }
@@ -51,10 +50,24 @@ class DeclarationDePerte extends Model
         static::creating(function ($model) {
             $model->uuid = (string) Str::uuid();
         });
+
+            // ← Soft delete → soft delete le certificat aussi
+        static::deleting(function ($declaration) {
+        if (!$declaration->isForceDeleting()) {
+            // Soft delete — on garde le PDF, juste on soft delete le certificat
+            $declaration->certificat?->delete();
+        }
+        });
+
+            // ← Restauration → restaure le certificat aussi
+        static::restoring(function ($declaration) {
+            $declaration->certificat()->withTrashed()->restore();
+        });
     }
 
     public function certificat()
     {
-        return $this->hasOne(CertificatDePerte::class, 'declaration_de_perte_id');
+        return $this->hasOne(CertificatDePerte::class, 'declaration_de_perte_id')
+        ->withTrashed();
     }
 }

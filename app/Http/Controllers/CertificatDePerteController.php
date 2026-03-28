@@ -1,9 +1,7 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\CertificatDePerte;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class CertificatDePerteController extends Controller
@@ -15,42 +13,41 @@ class CertificatDePerteController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('Admin')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Accès non autorisé.'
-            ], 403);
+        if (! $user->hasRole('Admin')) {
+            return response()->json(['success' => false, 'message' => 'Accès non autorisé.'], 403);
         }
 
         $certificats = CertificatDePerte::with([
             'declarationDePerte.documentType',
-            'declarationDePerte.user'
+            'declarationDePerte.user',
         ])
-        ->orderByDesc('created_at')
-        ->get()
-        ->map(function ($certificat) {
-            $declaration = $certificat->declarationDePerte;
-            return [
-                'id'         => $certificat->id,
-                'uuid'       => $certificat->uuid,
-                'nom'        => $declaration->LastNameInDoc,
-                'prenom'     => $declaration->FirstNameInDoc,
-                'created_at' => $certificat->created_at->toDateTimeString(),
-                'declaration' => [
-                    'uuid'          => $declaration->uuid,
-                    'Title'         => $declaration->Title,
-                    'FirstNameInDoc'=> $declaration->FirstNameInDoc,
-                    'LastNameInDoc' => $declaration->LastNameInDoc,
-                    'DocIdentification' => $declaration->DocIdentification,
-                    'document_type' => $declaration->documentType,
-                    'user'          => $declaration->user,
-                ],
-            ];
-        });
+            ->orderByDesc('created_at')
+            ->get()
+            ->filter(fn($c) => $c->declarationDePerte !== null) // ← évite le null
+            ->map(function ($certificat) {
+                $declaration = $certificat->declarationDePerte;
+                return [
+                    'id'          => $certificat->id,
+                    'uuid'        => $certificat->uuid,
+                    'nom'         => $declaration->LastNameInDoc,
+                    'prenom'      => $declaration->FirstNameInDoc,
+                    'created_at'  => $certificat->created_at->toDateTimeString(),
+                    'declaration' => [
+                        'uuid'              => $declaration->uuid,
+                        'Title'             => $declaration->Title,
+                        'FirstNameInDoc'    => $declaration->FirstNameInDoc,
+                        'LastNameInDoc'     => $declaration->LastNameInDoc,
+                        'DocIdentification' => $declaration->DocIdentification,
+                        'document_type'     => $declaration->documentType,
+                        'user'              => $declaration->user,
+                    ],
+                ];
+            })
+            ->values(); // ← réindexe après filter
 
         return response()->json([
-            'success'      => true,
-            'certificats'  => $certificats
+            'success'     => true,
+            'certificats' => $certificats,
         ]);
     }
 
@@ -61,45 +58,45 @@ class CertificatDePerteController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Utilisateur non authentifié.'
+                'message' => 'Utilisateur non authentifié.',
             ], 401);
         }
 
         $certificats = CertificatDePerte::with([
             'declarationDePerte.documentType',
-            'declarationDePerte.user'
+            'declarationDePerte.user',
         ])
-        ->whereHas('declarationDePerte', function ($query) use ($user) {
-            $query->where('user_id', $user->id);
-        })
-        ->orderByDesc('created_at')
-        ->get()
-        ->map(function ($certificat) {
-            $declaration = $certificat->declarationDePerte;
-            return [
-                'id'         => $certificat->id,
-                'uuid'       => $certificat->uuid,
-                'nom'        => $declaration->LastNameInDoc,
-                'prenom'     => $declaration->FirstNameInDoc,
-                'created_at' => $certificat->created_at->toDateTimeString(),
-                'declaration' => [
-                    'uuid'          => $declaration->uuid,
-                    'Title'         => $declaration->Title,
-                    'FirstNameInDoc'=> $declaration->FirstNameInDoc,
-                    'LastNameInDoc' => $declaration->LastNameInDoc,
-                    'DocIdentification' => $declaration->DocIdentification,
-                    'document_type' => $declaration->documentType,
-                    'user'          => $declaration->user,
-                ],
-            ];
-        });
+            ->whereHas('declarationDePerte', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($certificat) {
+                $declaration = $certificat->declarationDePerte;
+                return [
+                    'id'          => $certificat->id,
+                    'uuid'        => $certificat->uuid,
+                    'nom'         => $declaration->LastNameInDoc,
+                    'prenom'      => $declaration->FirstNameInDoc,
+                    'created_at'  => $certificat->created_at->toDateTimeString(),
+                    'declaration' => [
+                        'uuid'              => $declaration->uuid,
+                        'Title'             => $declaration->Title,
+                        'FirstNameInDoc'    => $declaration->FirstNameInDoc,
+                        'LastNameInDoc'     => $declaration->LastNameInDoc,
+                        'DocIdentification' => $declaration->DocIdentification,
+                        'document_type'     => $declaration->documentType,
+                        'user'              => $declaration->user,
+                    ],
+                ];
+            });
 
         return response()->json([
             'success'     => true,
-            'certificats' => $certificats
+            'certificats' => $certificats,
         ]);
     }
 
@@ -111,7 +108,7 @@ class CertificatDePerteController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Non authentifié'], 401);
         }
 
@@ -120,14 +117,14 @@ class CertificatDePerteController extends Controller
             ->firstOrFail();
 
         // Admin peut voir tous — user ne voit que les siens
-        if (!$user->hasRole('Admin') &&
+        if (! $user->hasRole('Admin') &&
             $certificat->declarationDePerte->user_id !== $user->id) {
             return response()->json(['message' => 'Accès refusé'], 403);
         }
 
         $path = storage_path('app/public/' . $certificat->pdf_path);
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             return response()->json(['message' => 'Fichier introuvable'], 404);
         }
 
@@ -145,10 +142,10 @@ class CertificatDePerteController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Utilisateur non authentifié.'
+                'message' => 'Utilisateur non authentifié.',
             ], 401);
         }
 
@@ -158,20 +155,20 @@ class CertificatDePerteController extends Controller
             ->firstOrFail();
 
         // Admin peut télécharger tous — user seulement les siens
-        if (!$user->hasRole('Admin') &&
+        if (! $user->hasRole('Admin') &&
             $certificat->declarationDePerte->user_id !== $user->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Accès non autorisé à ce certificat.'
+                'message' => 'Accès non autorisé à ce certificat.',
             ], 403);
         }
 
         $pdfPath = storage_path('app/public/' . $certificat->pdf_path);
 
-        if (!file_exists($pdfPath)) {
+        if (! file_exists($pdfPath)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Fichier PDF introuvable.'
+                'message' => 'Fichier PDF introuvable.',
             ], 404);
         }
 

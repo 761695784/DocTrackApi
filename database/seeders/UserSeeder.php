@@ -20,7 +20,7 @@ class UserSeeder extends Seeder
             'Adress' => 'Dakar',
             'Phone' => '+221761695784',
             'email' => 'malcom70976@gmail.com',
-            'password' => Hash::make('adminpassword'),
+            'password' => Hash::make('0123456789'),
         ]);
 
         // Assigner le rôle admin
@@ -34,7 +34,7 @@ class UserSeeder extends Seeder
                 'Adress' => 'Dakar',
                 'Phone' => '+221709764709',
                 'email' => 'malangmarna2018@gmail.com',
-                'password' => Hash::make('password123')
+                'password' => Hash::make('0123456789')
             ],
             [
                 'FirstName' => 'Elisa',
@@ -42,7 +42,7 @@ class UserSeeder extends Seeder
                 'Adress' => 'Dakar',
                 'Phone' => '+221762956580',
                 'email' => 'majeli061@gmail.com',
-                'password' => Hash::make('password1')
+                'password' => Hash::make('0123456789')
             ],
 
         ];

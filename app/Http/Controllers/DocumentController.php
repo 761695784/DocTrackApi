@@ -104,14 +104,14 @@ class DocumentController extends Controller
             ->log('Document publié');
 
         // ── Notifications ──
-        $declarations = DeclarationDePerte::whereRaw(
-            'LOWER(FirstNameInDoc) = ?',
-            [strtolower($document->OwnerFirstName)]
-        )
-            ->whereRaw(
-                'LOWER(LastNameInDoc) = ?',
-                [strtolower($document->OwnerLastName)]
+            $declarations = DeclarationDePerte::whereRaw(
+                'LOWER(FirstNameInDoc) = ?', [strtolower($document->OwnerFirstName)]
             )
+            ->whereRaw(
+                'LOWER(LastNameInDoc) = ?', [strtolower($document->OwnerLastName)]
+            )
+            ->where('document_type_id', $document->document_type_id) 
+            ->whereNull('deleted_at')                                
             ->with('user')
             ->get();
 
@@ -297,9 +297,8 @@ class DocumentController extends Controller
 
         // Vérifier si une demande de restitution pour ce document a déjà été faite par cet utilisateur
         $existingEmailLog = EmailLog::where('requester_user_id', $fromUser->id)
-                                                // ->where('document_id', $documentId)
-            ->where('document_id', $document->uuid) // Utilisation de uuid
-            ->whereNotNull('publisher_user_id')     // S'assurer qu'il s'agit bien d'une demande de restitution
+            ->where('document_id', $document->uuid)
+            ->where('subject', 'Demande de restitution') // ← sujet exact
             ->first();
 
         if ($existingEmailLog) {
