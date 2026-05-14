@@ -27,7 +27,7 @@ class Document extends Model implements HasMedia
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
-    
+
     public function documentType() {
         return $this->belongsTo(DocumentType::class);
     }
@@ -35,7 +35,7 @@ class Document extends Model implements HasMedia
     public function user() {
         return $this->belongsTo(User::class);
     }
-    
+
 
     public function comments() {
         return $this->hasMany(Commentaire::class);
@@ -78,7 +78,7 @@ class Document extends Model implements HasMedia
 
         // Version floutée — protection données sensibles
         $this->addMediaConversion('blurred')
-             ->blur(3)
+             ->blur(8)
              ->width(800)
              ->format('webp')
              ->performOnCollections('document_image')
